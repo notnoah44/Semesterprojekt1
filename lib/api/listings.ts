@@ -3,10 +3,13 @@ import { supabase } from '@/lib/supabase';
 import { toDateString } from '@/lib/utils/formatDate';
 import type { Listing, SearchFilters } from '@/types/listing';
 
+// Legacy street addresses stay out of public responses.
+const LISTING_FIELDS = 'id,owner_id,title,description,city,country,lat,lng,has_pets,pet_details,responsibilities,welcome_guide,photos,available_from,available_to,status,created_at';
+
 export async function getListings(filters: SearchFilters = {}) {
   let query = supabase
     .from('listings')
-    .select('*')
+    .select(LISTING_FIELDS)
     .eq('status', 'active')
     .or(`available_to.is.null,available_to.gte.${toDateString(new Date())}`);
 
@@ -17,10 +20,10 @@ export async function getListings(filters: SearchFilters = {}) {
     query = query.eq('has_pets', filters.hasPets);
   }
   if (filters.dateFrom) {
-    query = query.gte('available_from', filters.dateFrom.toISOString().split('T')[0]);
+    query = query.or(`available_to.is.null,available_to.gte.${toDateString(new Date(filters.dateFrom))}`);
   }
   if (filters.dateTo) {
-    query = query.lte('available_to', filters.dateTo.toISOString().split('T')[0]);
+    query = query.or(`available_from.is.null,available_from.lte.${toDateString(new Date(filters.dateTo))}`);
   }
 
   const { data, error } = await query.order('created_at', { ascending: false });
@@ -31,7 +34,7 @@ export async function getListings(filters: SearchFilters = {}) {
 export async function getListing(id: string) {
   const { data, error } = await supabase
     .from('listings')
-    .select('*')
+    .select(LISTING_FIELDS)
     .eq('id', id)
     .single();
   if (error) throw error;

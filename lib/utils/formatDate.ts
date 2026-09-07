@@ -1,5 +1,6 @@
 export function formatDate(dateStr: string, locale = 'en-GB') {
-  return new Date(dateStr).toLocaleDateString(locale, {
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(dateStr) ? fromDateString(dateStr) : new Date(dateStr);
+  return date.toLocaleDateString(locale, {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -16,7 +17,7 @@ export function daysUntil(dateStr: string) {
 }
 
 export function toDateString(date: Date): string {
-  return date.toISOString().split('T')[0];
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
 export function fromDateString(str: string): Date {

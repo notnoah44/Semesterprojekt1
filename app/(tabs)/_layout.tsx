@@ -1,5 +1,10 @@
+import { useUnreadChatCount } from '@/lib/hooks/useUnreadChatCount';
+import { usePushRegistration } from '@/lib/hooks/usePushRegistration';
 import { Tabs } from 'expo-router';
+import { PlatformPressable } from '@react-navigation/elements';
+import type { BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
 import { View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { StackActions, type EventArg } from '@react-navigation/native';
@@ -8,6 +13,15 @@ import { NotificationBell } from '@/components/home/NotificationBell';
 import { HelpButton } from '@/components/home/HelpButton';
 import { useNotifications } from '@/lib/hooks/useNotifications';
 import { useAppTheme } from '@/lib/contexts/ThemeContext';
+
+function RoundedTabButton({ style, ...props }: BottomTabBarButtonProps) {
+  return <PlatformPressable {...props} style={[style, {
+    borderRadius: 16,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    paddingVertical: 4,
+  }]} />;
+}
 
 /**
  * Ein Tap auf einen Tab soll immer zur Root des jeweiligen Stacks führen,
@@ -29,31 +43,38 @@ function resetTabOnPress({ navigation, route }: { navigation: any; route: { name
 }
 
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
   const theme = useAppTheme();
   const { t } = useTranslation();
   useNotifications();
+  usePushRegistration();
+  const unreadChat = useUnreadChatCount();
 
   return (
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: theme.primary,
         tabBarInactiveTintColor: theme.textSubtle,
+        tabBarButton: RoundedTabButton,
         tabBarStyle: {
           borderTopWidth: 0,
           backgroundColor: theme.surfaceVariant,
-          paddingBottom: 6,
+          paddingBottom: 6 + insets.bottom,
           paddingTop: 6,
-          height: 64,
+          height: 64 + insets.bottom,
           elevation: 0,
           shadowOpacity: 0,
         },
         tabBarLabelStyle: {
           fontFamily: 'Nunito_600SemiBold',
           fontSize: 11,
+          lineHeight: 14,
+          includeFontPadding: false,
           marginTop: 2,
         },
         tabBarItemStyle: {
           borderRadius: 16,
+          overflow: 'hidden',
           marginHorizontal: 4,
         },
         tabBarActiveBackgroundColor: theme.primaryContainer,
@@ -90,7 +111,9 @@ export default function TabLayout() {
         name="chat"
         options={{
           title: t('tabs.chat'),
-          tabBarIcon: ({ color, size }) => <MaterialIcons name="chat" size={size} color={color} />,
+          // Free the bottom of the conversation screen while typing.
+          tabBarHideOnKeyboard: true,
+          tabBarIcon: ({ color, size }) => <View><MaterialIcons name="chat" size={size} color={color} />{unreadChat > 0 && <View style={{ position: 'absolute', top: -2, right: -4, width: 9, height: 9, borderRadius: 5, backgroundColor: theme.error }} />}</View>,
         }}
         listeners={resetTabOnPress}
       />

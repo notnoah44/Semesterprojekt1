@@ -5,7 +5,10 @@ node_modules/
 
 # Expo
 .expo/
+.idea/
+web-reset/
 dist/
+dist-check/
 web-build/
 expo-env.d.ts
 

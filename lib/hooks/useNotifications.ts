@@ -1,60 +1,26 @@
 import { useEffect } from 'react';
+import { AppState } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { useNotificationStore } from '@/stores/notificationStore';
 import { useAuthStore } from '@/stores/authStore';
 
-// Push token registration is set up in a development build only
-
 export function useNotifications() {
-  const user = useAuthStore((s) => s.user);
-  const setNotifications = useNotificationStore((s) => s.setNotifications);
-
+  const userId = useAuthStore(s => s.user?.id);
   useEffect(() => {
-    if (!user) return;
-
-    supabase
-      .from('notifications')
-      .select('*')
-      .eq('profile_id', user.id)
-      .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        if (data) setNotifications(data);
-      });
-
-    const topic = `realtime:notifications:${user.id}`;
-    // Reuse an in-flight channel for this topic instead of calling `.on()` on it again:
-    // removeChannel() only closes the socket asynchronously, so a rapid effect re-run
-    // (e.g. the auth store emitting the user object more than once during registration)
-    // can otherwise find the old, already-(re)joining channel and throw.
-    let channel = supabase.getChannels().find((c) => c.topic === topic);
-
-    if (!channel) {
-      channel = supabase
-        .channel(`notifications:${user.id}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'notifications',
-            filter: `profile_id=eq.${user.id}`,
-          },
-          () => {
-            supabase
-              .from('notifications')
-              .select('*')
-              .eq('profile_id', user.id)
-              .order('created_at', { ascending: false })
-              .then(({ data }) => {
-                if (data) setNotifications(data);
-              });
-          }
-        )
-        .subscribe();
-    }
-
-    return () => {
-      supabase.removeChannel(channel);
+    let active = true;
+    let request = 0;
+    useNotificationStore.getState().setNotifications([]);
+    if (!userId) return;
+    const refresh = async () => {
+      const current = ++request;
+      const { data, error } = await supabase.from('notifications').select('*').eq('profile_id', userId).order('created_at', { ascending: false });
+      if (active && current === request && !error && data) useNotificationStore.getState().setNotifications(data);
     };
-  }, [user, setNotifications]);
+    void refresh();
+    const channel = supabase.channel(`notifications-${userId}-${Date.now()}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `profile_id=eq.${userId}` }, refresh)
+      .subscribe(status => { if (status === 'SUBSCRIBED') void refresh(); });
+    const listener = AppState.addEventListener('change', state => { if (state === 'active') void refresh(); });
+    return () => { active = false; listener.remove(); void supabase.removeChannel(channel); };
+  }, [userId]);
 }

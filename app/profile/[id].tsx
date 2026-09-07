@@ -152,7 +152,6 @@ export default function PublicProfileScreen() {
               </Text>
             </View>
           )}
-          {profile.membership_tier === 'standard' && <Badge label={t('subscription.currentPlanPro')} variant="primary" />}
         </View>
 
         {/* Details */}

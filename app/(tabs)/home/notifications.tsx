@@ -1,3 +1,4 @@
+import { readNotification, openNotification } from '@/lib/api/notifications';
 import { View, Text, FlatList, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -24,7 +25,7 @@ export default function NotificationsScreen() {
           {t('notifications.title')}
         </Text>
         {notifications.some((n) => !n.read) && (
-          <TouchableOpacity onPress={markAllRead}>
+          <TouchableOpacity onPress={() => { void readNotification().catch(() => {}); }}>
             <Text style={{ color: theme.primary, fontFamily: 'Nunito_600SemiBold', fontSize: 14 }}>
               {t('notifications.markAllRead')}
             </Text>
@@ -47,7 +48,7 @@ export default function NotificationsScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ padding: 16, gap: 10 }}
           renderItem={({ item }) => (
-            <TouchableOpacity onPress={() => markRead(item.id)}>
+            <TouchableOpacity onPress={() => { void readNotification(item.id).catch(() => {});  openNotification(item); }}>
               <Card style={{
                 backgroundColor: item.read ? theme.surface : theme.primaryContainer,
                 borderColor: item.read ? theme.border : theme.primary,

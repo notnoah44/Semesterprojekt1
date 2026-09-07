@@ -1,3 +1,8 @@
+import { useCallback } from 'react';
+import { unregisterPushToken } from '@/lib/hooks/usePushRegistration';
+import { useFocusEffect } from 'expo-router';
+import { refreshOwnProfile } from '@/lib/hooks/useProfileRefresh';
+import { useMembership } from '@/lib/hooks/useMembership';
 import { useRef, useState } from 'react';
 import { ScrollView, View, Text, TouchableOpacity, Modal, Pressable, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -156,16 +161,19 @@ export default function KontoScreen() {
   const { t } = useTranslation();
 
   const handleLogout = async () => {
+    await unregisterPushToken().catch(() => {});
     await supabase.auth.signOut();
     clear();
   };
 
+  const { isPro } = useMembership();
+  useFocusEffect(useCallback(() => { void refreshOwnProfile().catch(() => {}); }, []));
   const membershipDays = user?.membership_expires_at
     ? daysUntil(user.membership_expires_at)
     : null;
 
   return (
-    <SafeAreaView edges={['bottom']} style={{ flex: 1, backgroundColor: theme.background }}>
+    <SafeAreaView edges={['left', 'right']} style={{ flex: 1, backgroundColor: theme.background }}>
       <ScrollView contentContainerStyle={{ padding: 20, gap: 12 }}>
 
         {/* Profile header */}
@@ -183,8 +191,8 @@ export default function KontoScreen() {
               {isSitter ? t('konto.sitterAccount') : t('konto.hostAccount')}
             </Text>
             <Badge
-              label={user?.membership_tier === 'standard' ? t('konto.standardMember') : t('konto.freePlan')}
-              variant={user?.membership_tier === 'standard' ? 'primary' : 'neutral'}
+              label={isPro ? t('konto.standardMember') : t('konto.freePlan')}
+              variant={isPro ? 'primary' : 'neutral'}
             />
           </View>
         </View>
@@ -216,7 +224,7 @@ export default function KontoScreen() {
             iconBg="#FEF3C7"
             iconColor="#D97706"
             label={t('konto.subscription')}
-            subtitle={user?.membership_tier === 'standard'
+            subtitle={isPro
               ? (membershipDays !== null ? t('konto.membershipDays', { days: membershipDays }) : t('konto.standardActive'))
               : t('konto.upgradeHint')}
             onPress={() => router.push('/(tabs)/konto/subscription')}

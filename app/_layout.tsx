@@ -1,8 +1,10 @@
+import { useProfileRefresh } from '@/lib/hooks/useProfileRefresh';
 import { useEffect } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { useFonts, Nunito_300Light, Nunito_400Regular, Nunito_600SemiBold, Nunito_700Bold } from '@expo-google-fonts/nunito';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { getProfile } from '@/lib/api/profiles';
@@ -14,6 +16,7 @@ import '../global.css';
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  useProfileRefresh();
   const router = useRouter();
   const segments = useSegments();
   const { setUser, setLoading, isLoading } = useAuthStore();
@@ -75,9 +78,11 @@ export default function RootLayout() {
   if (!fontsReady || isLoading) return null;
 
   return (
-    <ThemeProvider>
-      <StatusBar style="dark" />
-      <Stack screenOptions={{ headerShown: false }} />
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider>
+        <StatusBar style="dark" />
+        <Stack screenOptions={{ headerShown: false }} />
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }

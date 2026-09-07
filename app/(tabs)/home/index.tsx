@@ -54,7 +54,7 @@ export default function HomeScreen() {
   const firstName = user?.full_name?.split(' ')[0];
 
   return (
-    <SafeAreaView edges={['bottom']} style={{ flex: 1, backgroundColor: theme.background }}>
+    <SafeAreaView edges={['left', 'right']} style={{ flex: 1, backgroundColor: theme.background }}>
       <ScrollView contentContainerStyle={{ paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
 
         {/* Greeting header */}

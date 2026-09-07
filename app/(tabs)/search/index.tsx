@@ -1,5 +1,7 @@
+import { DateFilter } from '@/components/search/DateFilter';
+import { SaveSearchModal } from '@/components/search/SaveSearchModal';
 import { useState, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, FlatList, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -12,7 +14,6 @@ import { useAppTheme } from '@/lib/contexts/ThemeContext';
 import { useRequireAuth } from '@/lib/hooks/useRequireAuth';
 import { SitterSearchView } from '@/components/search/SitterSearchView';
 import { getFavouriteListingIds, addFavourite, removeFavourite } from '@/lib/api/favourites';
-import { createSavedSearch } from '@/lib/api/savedSearches';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { formatDateRange } from '@/lib/utils/formatDate';
@@ -69,7 +70,7 @@ function ListingCard({ listing, isFavourite, onToggleFavourite }: {
 export default function SearchScreen() {
   const router = useRouter();
   const { isSitter } = useRole();
-  const { results, isLoading, search } = useSearch();
+  const { results, isLoading, error, search } = useSearch();
   const { updateFilter, filters } = useSearchStore();
   const user = useAuthStore((s) => s.user);
   const ensureAuth = useRequireAuth();
@@ -77,6 +78,7 @@ export default function SearchScreen() {
   const { t } = useTranslation();
   const [keyword, setKeyword] = useState('');
   const [favIds, setFavIds] = useState<Set<string>>(new Set());
+  const [showSaveSearch, setShowSaveSearch] = useState(false);
 
   // Re-runs whenever filters change (search is memoised on filters)
   useEffect(() => { search(); }, [search]);
@@ -112,21 +114,15 @@ export default function SearchScreen() {
     }
   }, [user, favIds, ensureAuth]);
 
-  const handleSaveSearch = async () => {
+  const handleSaveSearch = () => {
     if (!ensureAuth() || !user) return;
-    const name = [filters.keyword, filters.city, filters.country].filter(Boolean).join(' ') || t('search.mySearchFallback');
-    try {
-      await createSavedSearch(user.id, name, filters);
-      Alert.alert(t('search.savedTitle'), t('search.savedMsg', { name }));
-    } catch {
-      Alert.alert(t('errors.title'), t('search.saveFailed'));
-    }
+    setShowSaveSearch(true);
   };
 
   if (!isSitter) return <SitterSearchView />;
 
   return (
-    <SafeAreaView edges={['bottom']} style={{ flex: 1, backgroundColor: theme.background }}>
+    <SafeAreaView edges={['left', 'right']} style={{ flex: 1, backgroundColor: theme.background }}>
       <View style={{ padding: 16, gap: 12 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: theme.surface, borderRadius: 14, borderWidth: 1, borderColor: theme.border, paddingHorizontal: 14, paddingVertical: 10, gap: 8 }}>
@@ -155,7 +151,13 @@ export default function SearchScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          style={{ flexGrow: 0 }}
+          contentContainerStyle={{ gap: 8, alignItems: 'center' }}
+        >
           <TouchableOpacity
             onPress={() => updateFilter('hasPets', filters.hasPets === true ? null : true)}
             style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 99, backgroundColor: filters.hasPets === true ? theme.primaryContainer : theme.surfaceDim, borderWidth: 1, borderColor: filters.hasPets === true ? theme.primary : theme.border }}
@@ -171,14 +173,26 @@ export default function SearchScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             onPress={handleSaveSearch}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 99, backgroundColor: theme.surfaceDim, borderWidth: 1, borderColor: theme.border, marginLeft: 'auto' }}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 99, backgroundColor: theme.surfaceDim, borderWidth: 1, borderColor: theme.border }}
           >
             <MaterialIcons name="bookmark-add" size={15} color={theme.textMuted} />
             <Text style={{ fontSize: 13, fontFamily: 'Nunito_600SemiBold', color: theme.textMuted }}>{t('search.save')}</Text>
           </TouchableOpacity>
-        </View>
+        </ScrollView>
       </View>
 
+      <View style={{ paddingHorizontal: 16 }}><DateFilter /></View>
+      {error && <Text style={{ color: theme.error, padding: 16 }}>{t('errors.auth.generic')}</Text>}
+      {user && <SaveSearchModal
+        visible={showSaveSearch}
+        userId={user.id}
+        filters={filters}
+        onClose={() => setShowSaveSearch(false)}
+        onSaved={(name) => {
+          setShowSaveSearch(false);
+          Alert.alert(t('search.savedTitle'), t('search.savedMsg', { name }));
+        }}
+      />}
       <FlatList
         data={results}
         keyExtractor={(item) => item.id}

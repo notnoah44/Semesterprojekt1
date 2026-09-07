@@ -79,6 +79,9 @@ export default function LoginScreen() {
             )}
           />
 
+          <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')} style={{ marginBottom: 20 }}>
+            <Text style={{ color: theme.primary }}>{t('fixes.forgotPassword')}</Text>
+          </TouchableOpacity>
           {error && (
             <Text style={{ color: theme.error, fontSize: 14, marginBottom: 16, fontFamily: 'Nunito_400Regular' }}>
               {error}

@@ -16,6 +16,8 @@ export function RoleToggle() {
         flexDirection: 'row',
         backgroundColor: theme.surfaceDim,
         borderRadius: 99,
+        overflow: 'hidden',
+        alignItems: 'center',
         padding: 3,
         borderWidth: 1,
         borderColor: theme.border,
@@ -31,11 +33,16 @@ export function RoleToggle() {
               paddingHorizontal: 14,
               paddingVertical: 6,
               borderRadius: 99,
+              overflow: 'hidden',
+              alignItems: 'center',
+              justifyContent: 'center',
               backgroundColor: active ? theme.primaryContainer : 'transparent',
             }}
           >
             <Text style={{
               fontSize: 12,
+              lineHeight: 16,
+              includeFontPadding: false,
               letterSpacing: 0.3,
               color: active ? theme.onPrimaryContainer : theme.textSubtle,
               fontFamily: 'Nunito_700Bold',

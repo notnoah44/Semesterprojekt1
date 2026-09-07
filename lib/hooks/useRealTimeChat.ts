@@ -11,7 +11,7 @@ export function useRealTimeChat(
   useEffect(() => {
     if (!conversationId) return;
 
-    const topic = `realtime:messages:${conversationId}`;
+    const topic = `realtime:messages:${conversationId}:${Date.now()}`;
     // Reuse an in-flight channel for this topic instead of calling `.on()` on it again:
     // removeChannel() only closes the socket asynchronously, so a rapid effect re-run
     // can otherwise find the old, already-(re)joining channel and throw.
@@ -20,7 +20,7 @@ export function useRealTimeChat(
     channelRef.current =
       existing ??
       supabase
-        .channel(`messages:${conversationId}`)
+        .channel(topic.replace(/^realtime:/, ''))
         .on(
           'postgres_changes',
           {

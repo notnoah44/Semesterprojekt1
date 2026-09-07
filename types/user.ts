@@ -3,6 +3,7 @@ export type MembershipTier = 'free' | 'standard';
 export type MembershipPlan = 'monthly' | 'quarterly' | 'yearly';
 
 export interface Profile {
+  is_blocked?: boolean;
   id: string;
   first_name: string | null;
   last_name: string | null;

@@ -18,7 +18,7 @@ export default function ChangePasswordScreen() {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSave = async () => {
-    if (password.length < 6) {
+    if (password.length < 8) {
       Alert.alert(t('changePassword.tooShortTitle'), t('changePassword.tooShortMsg'));
       return;
     }

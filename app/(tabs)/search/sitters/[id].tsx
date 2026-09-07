@@ -1,3 +1,4 @@
+import { PhotoGallery } from '@/components/ui/PhotoGallery';
 import { useState, useEffect } from 'react';
 import { ScrollView, View, Text, TouchableOpacity, Image, ActivityIndicator, TextInput, Platform, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -81,7 +82,7 @@ export default function SitterListingDetailScreen() {
 
   const handleMessage = async () => {
     if (!ensureAuth() || !user || !listing) return;
-    const existing = await findConversation(user.id, listing.sitter_id);
+    const existing = await findConversation(user.id, listing.sitter_id, undefined, listing.id);
     if (!existing && !(await ensureHostProfile(user.id, t, router))) return;
     if (!existing && !canSendFirstMessage) {
       showPaywallModal(t, router);
@@ -116,7 +117,7 @@ export default function SitterListingDetailScreen() {
       <ScrollView>
         {/* Photo */}
         {coverImage ? (
-          <Image source={{ uri: coverImage }} style={{ width: '100%', height: 260 }} resizeMode="cover" />
+          <PhotoGallery photos={[...new Set([coverImage, ...(listing.sitter?.photos ?? [])])]} />
         ) : (
           <View style={{ width: '100%', height: 200, backgroundColor: theme.surfaceDim, alignItems: 'center', justifyContent: 'center' }}>
             <Text style={{ fontSize: 48 }}>🧑‍🦱</Text>

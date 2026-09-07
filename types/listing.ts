@@ -12,7 +12,7 @@ export interface Listing {
   owner_id: string;
   title: string;
   description: string | null;
-  address: string | null;
+  address?: string | null;
   city: string | null;
   country: string | null;
   lat: number | null;

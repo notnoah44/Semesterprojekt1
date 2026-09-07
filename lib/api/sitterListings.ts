@@ -33,12 +33,12 @@ export async function getSitterListings(filters: SitterSearchFilters = {}) {
     results = results.filter((l) => l.pet_sitting === filters.petSitting || l.pet_sitting === 'both');
   }
   if (filters.dateFrom || filters.dateTo) {
-    const from = filters.dateFrom;
-    const to = filters.dateTo;
+    const from = filters.dateFrom ? toDateString(new Date(filters.dateFrom)) : undefined;
+    const to = filters.dateTo ? toDateString(new Date(filters.dateTo)) : undefined;
     results = results.filter((l) =>
-      l.availability_periods.some((p) => {
-        const periodFrom = new Date(p.from);
-        const periodTo = new Date(p.to);
+      l.availability_periods.length === 0 || l.availability_periods.some((p) => {
+        const periodFrom = p.from;
+        const periodTo = p.to;
         if (from && periodTo < from) return false;
         if (to && periodFrom > to) return false;
         return true;

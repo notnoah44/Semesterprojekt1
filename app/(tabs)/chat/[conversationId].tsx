@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { View, Text, FlatList, TextInput, TouchableOpacity, Keyboard, KeyboardAvoidingView, Platform, Alert, AppState } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useHeaderHeight } from '@react-navigation/elements';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
+import { ReportModal } from '@/components/chat/ReportModal';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/stores/authStore';
@@ -14,6 +16,8 @@ import { Avatar } from '@/components/ui/Avatar';
 import type { Message } from '@/types/chat';
 
 export default function ConversationScreen() {
+  const headerHeight = useHeaderHeight();
+  const insets = useSafeAreaInsets();
   const { conversationId } = useLocalSearchParams<{ conversationId: string }>();
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
@@ -28,34 +32,64 @@ export default function ConversationScreen() {
   const [connected, setConnected] = useState(false);
   const [text, setText] = useState('');
   const [showHelp, setShowHelp] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [retry, setRetry] = useState(0);
+  const [showReport, setShowReport] = useState(false);
+  const [listingRef, setListingRef] = useState<{ id: string; title: string; sitter: boolean } | null>(null);
+  const [androidKeyboardHeight, setAndroidKeyboardHeight] = useState(0);
+  const focused = useRef(false);
   const listRef = useRef<FlatList>(null);
 
   useEffect(() => {
-    if (!conversationId || !user) return;
-    getMessages(conversationId).then((msgs) => {
-      setMessages(msgs);
-      markMessagesRead(conversationId, user.id);
+    if (Platform.OS !== 'android') return;
+    const showSubscription = Keyboard.addListener('keyboardDidShow', (event) => {
+      setAndroidKeyboardHeight(event.endCoordinates.height);
     });
+    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
+      setAndroidKeyboardHeight(0);
+    });
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
+
+  useFocusEffect(useCallback(() => {
+    focused.current = true;
+    if (!conversationId || !user) return;
+    let active = true;
+    setLoadError(false);
+    const reload = () => getMessages(conversationId).then((msgs) => {
+      if (!active || AppState.currentState !== 'active') return;
+      setMessages(prev => [...new Map([...prev.filter(m => m.conversation_id === conversationId), ...msgs].map(m => [m.id, m])).values()].sort((a, b) => a.created_at.localeCompare(b.created_at)));
+      void markMessagesRead(conversationId, user.id).catch(() => {});
+    }).catch(() => { if (active) setLoadError(true); });
+    void reload();
+    const appListener = AppState.addEventListener('change', state => { if (state === 'active') void reload(); });
     getConversation(conversationId).then((conv) => {
+      if (!active) return;
       const other = conv.participant1 === user.id
         ? conv.participant2_profile
         : conv.participant1_profile;
       setOtherUser(other);
+      setListingRef(conv.listing ? { ...conv.listing, sitter: false } : conv.sitter_listing ? { ...conv.sitter_listing, sitter: true } : null);
       setIsUnlocked(conv.is_unlocked ?? true);
-      if (other?.id) isConnected(user.id, other.id).then(setConnected);
+      if (other?.id) isConnected(user.id, other.id).then(setConnected).catch(() => {});
 
       if (conv.listing?.owner_id) {
         setViewMode(conv.listing.owner_id === user.id ? 'sitter' : 'host');
       } else if (conv.sitter_listing?.sitter_id) {
         setViewMode(conv.sitter_listing.sitter_id === user.id ? 'host' : 'sitter');
       }
-    });
-  }, [conversationId, user]);
+    }).catch(() => { if (active) setLoadError(true); });
+    return () => { active = false; focused.current = false; appListener.remove(); };
+  }, [conversationId, user?.id, retry]));
 
   const handleNewMessage = useCallback((msg: Message) => {
-    setMessages((prev) => [...prev, msg]);
+    setMessages((prev) => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
+    if (focused.current && AppState.currentState === 'active' && user && msg.sender_id !== user.id) void markMessagesRead(msg.conversation_id, user.id).catch(() => {});
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
-  }, []);
+  }, [user?.id]);
 
   useRealTimeChat(conversationId ?? null, handleNewMessage);
 
@@ -65,12 +99,23 @@ export default function ConversationScreen() {
     if (!canReply || !text.trim() || !user || !conversationId) return;
     const content = text.trim();
     setText('');
-    await sendMessage({ conversation_id: conversationId, sender_id: user.id, content });
+    try {
+      const message = await sendMessage({ conversation_id: conversationId, sender_id: user.id, content });
+      handleNewMessage(message);
+    } catch { setText(content); Alert.alert(t('errors.title'), t('errors.auth.generic')); }
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      // Android is adjusted explicitly using the keyboard height below;
+      // KeyboardAvoidingView is retained for iOS where padding is reliable.
+      enabled={Platform.OS === 'ios'}
+      behavior="padding"
+      keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
+    >
+    <SafeAreaView edges={['left', 'right']} style={{ flex: 1, backgroundColor: theme.background }}>
       {/* Header */}
       <View style={{ flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: theme.border, backgroundColor: theme.surface, gap: 12 }}>
         <TouchableOpacity onPress={() => router.back()}>
@@ -91,6 +136,10 @@ export default function ConversationScreen() {
         </TouchableOpacity>
       </View>
 
+      {listingRef && <TouchableOpacity onPress={() => router.push(listingRef.sitter ? `/(tabs)/search/sitters/${listingRef.id}` : `/(tabs)/search/listings/${listingRef.id}`)} style={{ paddingHorizontal: 16, paddingVertical: 10, backgroundColor: theme.surface }}>
+        <Text numberOfLines={1} style={{ color: theme.primary }}>{listingRef.title} ›</Text>
+      </TouchableOpacity>}
+      {showReport && otherUser?.id && <ReportModal userId={otherUser.id} conversationId={conversationId} onClose={() => setShowReport(false)} />}
       {/* Help bottom sheet */}
       {showHelp && (
         <TouchableOpacity
@@ -116,7 +165,7 @@ export default function ConversationScreen() {
                 <Text style={{ fontSize: 13, color: theme.textMuted, fontFamily: 'Nunito_400Regular' }}>{t('chat.callUserDesc')}</Text>
               </View>
             </TouchableOpacity>
-            <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, backgroundColor: '#FEE2E2', borderRadius: 14 }}>
+            <TouchableOpacity onPress={() => { setShowHelp(false); setShowReport(true); }} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, backgroundColor: '#FEE2E2', borderRadius: 14 }}>
               <MaterialIcons name="flag" size={22} color="#991B1B" />
               <View>
                 <Text style={{ fontSize: 15, fontFamily: 'Nunito_700Bold', color: '#991B1B' }}>{t('chat.reportUser')}</Text>
@@ -128,7 +177,14 @@ export default function ConversationScreen() {
       )}
 
       {/* Messages */}
+      {loadError && <View style={{ padding: 16, gap: 8 }}>
+        <Text accessibilityRole="alert" style={{ color: theme.error }}>{t('fixes.chatLoadFailed')}</Text>
+        <TouchableOpacity onPress={() => setRetry(value => value + 1)}><Text style={{ color: theme.primary }}>{t('fixes.retry')}</Text></TouchableOpacity>
+      </View>}
       <FlatList
+        style={{ flex: 1 }}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
         ref={listRef}
         data={messages}
         keyExtractor={(item) => item.id}
@@ -159,9 +215,16 @@ export default function ConversationScreen() {
       />
 
       {/* Input */}
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <View>
         {canReply ? (
-          <View style={{ flexDirection: 'row', alignItems: 'flex-end', padding: 12, gap: 10, borderTopWidth: 1, borderTopColor: theme.border, backgroundColor: theme.surface }}>
+          <View style={{
+            flexDirection: 'row', alignItems: 'flex-end', padding: 12, gap: 10,
+            borderTopWidth: 1, borderTopColor: theme.border, backgroundColor: theme.surface,
+            // Expo Go on Android can keep the screen in edge-to-edge mode and
+            // leave the keyboard over the bottom of the scene. Move the
+            // composer by the actual keyboard height in that case.
+            marginBottom: Platform.OS === 'android' ? androidKeyboardHeight + insets.bottom : 0,
+          }}>
             <TextInput
               style={{
                 flex: 1, minHeight: 42, maxHeight: 120,
@@ -194,7 +257,8 @@ export default function ConversationScreen() {
             </TouchableOpacity>
           </View>
         )}
-      </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 }

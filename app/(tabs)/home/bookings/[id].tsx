@@ -105,12 +105,12 @@ function BookingDetailContent() {
 
   const handleChat = async () => {
     if (!user || !otherUser) return;
-    const existing = await findConversation(user.id, otherUser.id);
+    const existing = await findConversation(user.id, otherUser.id, booking.listing_id ?? undefined, booking.sitter_listing_id ?? undefined);
     if (!existing && !isPro) {
       showPaywallModal(t, router);
       return;
     }
-    const conv = existing ?? (await getOrCreateConversation(user.id, otherUser.id, booking.listing_id));
+    const conv = existing ?? (await getOrCreateConversation(user.id, otherUser.id, booking.listing_id ?? undefined, booking.sitter_listing_id ?? undefined));
     router.push(`/(tabs)/chat/${conv.id}`);
   };
 

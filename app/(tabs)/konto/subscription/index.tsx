@@ -243,7 +243,7 @@ export default function SubscriptionScreen() {
           {FEATURES_PRO_KEYS.map((key) => (
             <View key={key} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
               <MaterialIcons name="check-circle" size={18} color={theme.primary} />
-              <Text style={{ fontSize: 14, color: theme.text, fontFamily: 'Nunito_400Regular' }}>{t(`subscription.${key}`)}</Text>
+              <Text style={{ flex: 1, fontSize: 14, color: theme.text, fontFamily: 'Nunito_400Regular' }}>{t(`subscription.${key}`)}</Text>
             </View>
           ))}
         </Card>
@@ -253,16 +253,16 @@ export default function SubscriptionScreen() {
           {FEATURES_FREE_KEYS.map((key) => (
             <View key={key} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
               <MaterialIcons name="check-circle-outline" size={18} color={theme.textMuted} />
-              <Text style={{ fontSize: 14, color: theme.textMuted, fontFamily: 'Nunito_400Regular' }}>{t(`subscription.${key}`)}</Text>
+              <Text style={{ flex: 1, fontSize: 14, color: theme.textMuted, fontFamily: 'Nunito_400Regular' }}>{t(`subscription.${key}`)}</Text>
             </View>
           ))}
         </Card>
 
         {/* Referral */}
         <Card style={{ backgroundColor: theme.primaryContainer, borderColor: theme.primary }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-            <MaterialIcons name="share" size={22} color={theme.onPrimaryContainer} />
-            <Text style={{ fontSize: 16, fontFamily: 'Nunito_700Bold', color: theme.onPrimaryContainer }}>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: 8 }}>
+            <MaterialIcons name="share" size={22} color={theme.onPrimaryContainer} style={{ marginTop: 1 }} />
+            <Text style={{ flex: 1, minWidth: 0, fontSize: 16, lineHeight: 23, fontFamily: 'Nunito_700Bold', color: theme.onPrimaryContainer }}>
               {t('subscription.referTitle')}
             </Text>
           </View>

@@ -1,3 +1,4 @@
+import { fixesEn, fixesDe, fixesEs, fixesFr } from './fixes';
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { getLocales } from 'expo-localization';
@@ -26,10 +27,10 @@ export function detectDeviceLanguage(): Language {
 if (!i18n.isInitialized) {
   i18n.use(initReactI18next).init({
     resources: {
-      en: { translation: en },
-      de: { translation: de },
-      es: { translation: es },
-      fr: { translation: fr },
+      en: { translation: { ...en, fixes: fixesEn } },
+      de: { translation: { ...de, fixes: fixesDe } },
+      es: { translation: { ...es, fixes: fixesEs } },
+      fr: { translation: { ...fr, fixes: fixesFr } },
     },
     lng: detectDeviceLanguage(),
     fallbackLng: DEFAULT_LANGUAGE,

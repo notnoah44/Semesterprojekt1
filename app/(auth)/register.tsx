@@ -154,6 +154,10 @@ export default function RegisterScreen() {
             )}
           />
 
+          <Controller control={control} name="confirmPassword" render={({ field: { onChange, value } }) => (
+            <Input label={t('fixes.confirmPassword')} value={value} onChangeText={onChange} secureTextEntry autoComplete="new-password" error={errors.confirmPassword?.message ? t(errors.confirmPassword.message) : undefined} />
+          )} />
+
           {error && (
             <Text style={{ color: theme.error, fontSize: 14, marginBottom: 16, fontFamily: 'Nunito_400Regular' }}>
               {error}

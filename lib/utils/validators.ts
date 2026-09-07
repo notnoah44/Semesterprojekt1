@@ -8,6 +8,9 @@ export const loginSchema = z.object({
 export const registerSchema = loginSchema.extend({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
   lastName: z.string().min(2, 'Last name must be at least 2 characters'),
+  confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: 'fixes.passwordMismatch', path: ['confirmPassword'],
 });
 
 export const profileSchema = z.object({

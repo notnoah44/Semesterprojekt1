@@ -1,3 +1,4 @@
+import { PhotoGallery } from '@/components/ui/PhotoGallery';
 import { useState, useEffect } from 'react';
 import { ScrollView, View, Text, TouchableOpacity, Image, ActivityIndicator, TextInput, Platform, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -60,7 +61,7 @@ export default function ListingDetailScreen() {
 
   const handleMessage = async () => {
     if (!ensureAuth() || !user || !listing) return;
-    const existing = await findConversation(user.id, listing.owner_id);
+    const existing = await findConversation(user.id, listing.owner_id, listing.id);
     if (!existing && !(await ensureSitterProfile(user.id, t, router))) return;
     if (!existing && !canSendFirstMessage) {
       showPaywallModal(t, router);
@@ -93,7 +94,7 @@ export default function ListingDetailScreen() {
       <ScrollView>
         {/* Photo */}
         {listing.photos.length > 0 ? (
-          <Image source={{ uri: listing.photos[0] }} style={{ width: '100%', height: 260 }} resizeMode="cover" />
+          <PhotoGallery photos={listing.photos} />
         ) : (
           <View style={{ width: '100%', height: 200, backgroundColor: theme.surfaceDim, alignItems: 'center', justifyContent: 'center' }}>
             <Text style={{ fontSize: 48 }}>🏡</Text>
@@ -175,7 +176,7 @@ export default function ListingDetailScreen() {
               </View>
               {listing.pet_details.map((pet, i) => (
                 <Text key={i} style={{ fontSize: 14, color: theme.text, fontFamily: 'Nunito_400Regular', marginBottom: 4 }}>
-                  • {pet.name} ({pet.type}{pet.age ? t('listingDetail.petAgeSuffix', { age: pet.age }) : ''})
+                  • {pet.name} ({pet.type}{pet.age ? t('listingDetail.petAgeSuffix', { age: pet.age }) : ''}){pet.special_needs ? ` — ${pet.special_needs}` : ''}
                 </Text>
               ))}
             </Card>

@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { DateFilter } from '@/components/search/DateFilter';
+import { useSearchStore } from '@/stores/searchStore';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, FlatList, TouchableOpacity, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -60,22 +62,29 @@ export function SitterSearchView() {
   const ensureAuth = useRequireAuth();
   const theme = useAppTheme();
   const { t } = useTranslation();
+  const filters = useSearchStore((s) => s.filters);
   const [keyword, setKeyword] = useState('');
   const [results, setResults] = useState<SitterListingWithProfile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [favIds, setFavIds] = useState<Set<string>>(new Set());
+  const request = useRef(0);
+  const [error, setError] = useState(false);
 
   const search = useCallback(async () => {
+    const current = ++request.current;
     setIsLoading(true);
+    setError(false);
     try {
-      const data = await getSitterListings({ keyword: keyword || undefined });
-      setResults(data);
+      const data = await getSitterListings({ keyword: keyword || undefined, dateFrom: filters.dateFrom, dateTo: filters.dateTo });
+      if (current === request.current) setResults(data);
+    } catch {
+      if (current === request.current) setError(true);
     } finally {
-      setIsLoading(false);
+      if (current === request.current) setIsLoading(false);
     }
-  }, [keyword]);
+  }, [keyword, filters.dateFrom, filters.dateTo]);
 
-  useEffect(() => { search(); }, []);
+  useEffect(() => { search(); }, [search]);
 
   useEffect(() => {
     if (!user) return;
@@ -105,7 +114,7 @@ export function SitterSearchView() {
   }, [user, favIds, ensureAuth]);
 
   return (
-    <SafeAreaView edges={['bottom']} style={{ flex: 1, backgroundColor: theme.background }}>
+    <SafeAreaView edges={['left', 'right']} style={{ flex: 1, backgroundColor: theme.background }}>
       <View style={{ padding: 16 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.surface, borderRadius: 14, borderWidth: 1, borderColor: theme.border, paddingHorizontal: 14, paddingVertical: 10, gap: 8 }}>
           <MaterialIcons name="search" size={20} color={theme.textMuted} />
@@ -121,6 +130,8 @@ export function SitterSearchView() {
         </View>
       </View>
 
+      <View style={{ paddingHorizontal: 16 }}><DateFilter /></View>
+      {error && <Text style={{ color: theme.error, padding: 16 }}>{t('errors.auth.generic')}</Text>}
       <FlatList
         data={results}
         keyExtractor={(item) => item.id}

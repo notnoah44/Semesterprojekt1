@@ -1,5 +1,7 @@
 # Fixes noch offen
 
+> Umsetzungsstand vom 07.09.2026 und manuelle Tests: [noah_fixes_pruefliste.md](noah_fixes_pruefliste.md). Die ursprünglichen Beschreibungen bleiben unten als Referenz erhalten. Datenbankmigration und externe Mail-/Push-Einrichtung sind dort gesondert gekennzeichnet.
+
 Sammlung der gemeldeten Punkte, in einer sinnvollen Bearbeitungsreihenfolge mit konkreten Umsetzungshinweisen. Reihenfolge orientiert sich an: (1) schnelle, unabhängige UI-Fixes, (2) Auth/Registrierung, (3) Inserate, (4) Chat/Benachrichtigungen (hängen zusammen, daher als Block), (5) Konto/Sichtbarkeit, (6) Sicherheits-/Moderationsflows, (7) Infrastruktur (E-Mail, Push).
 
 ---

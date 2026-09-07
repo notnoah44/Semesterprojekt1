@@ -47,12 +47,12 @@ function CreateListingContent() {
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
   const [country, setCountry] = useState('');
   const [availableFrom, setAvailableFrom] = useState<Date | null>(null);
   const [availableTo, setAvailableTo] = useState<Date | null>(null);
   const [hasPets, setHasPets] = useState(false);
+  const [pets, setPets] = useState<{ type: string; name: string; special_needs?: string }[]>([]);
   const [responsibilities, setResponsibilities] = useState<string[]>([]);
   const [responsibilityInput, setResponsibilityInput] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
@@ -64,12 +64,12 @@ function CreateListingContent() {
       .then((l) => {
         setTitle(l.title ?? '');
         setDescription(l.description ?? '');
-        setAddress(l.address ?? '');
         setCity(l.city ?? '');
         setCountry(l.country ?? '');
         setAvailableFrom(l.available_from ? new Date(l.available_from) : null);
         setAvailableTo(l.available_to ? new Date(l.available_to) : null);
         setHasPets(l.has_pets ?? false);
+        setPets(l.pet_details ?? []);
         setResponsibilities(l.responsibilities ?? []);
         setPhotos(l.photos ?? []);
       })
@@ -111,25 +111,30 @@ function CreateListingContent() {
 
   const handleSave = async (status: 'draft' | 'active' = 'active') => {
     if (!user) return;
-    if (!title.trim()) { Alert.alert(t('listingCreate.missingTitleAlert'), t('listingCreate.missingTitleMsg')); return; }
+    if (status === 'active' && !title.trim()) { Alert.alert(t('listingCreate.missingTitleAlert'), t('listingCreate.missingTitleMsg')); return; }
+    if (status === 'active' && hasPets && (pets.length === 0 || pets.some(p => !p.type.trim() || !p.name.trim() || !p.special_needs?.trim()))) {
+      Alert.alert(t('errors.title'), t('fixes.petsRequired')); setStep(1); return;
+    }
     setIsLoading(true);
     try {
       await upsertListing({
         ...(id ? { id } : {}),
         owner_id: user.id,
-        title: title.trim(),
+        title: title.trim() || 'Entwurf',
         description: description.trim() || undefined,
-        address: address.trim() || undefined,
         city: city.trim() || undefined,
         country: country.trim() || undefined,
         available_from: availableFrom ? toDateString(availableFrom) : undefined,
         available_to: availableTo ? toDateString(availableTo) : undefined,
         has_pets: hasPets,
+        pet_details: hasPets ? pets : [],
         responsibilities,
         photos,
         status,
       });
-      router.replace(isEditing ? '/(tabs)/search/listings/my-listings' : '/(tabs)/home');
+      // Return to the search root after creating a listing so the role-specific
+      // search view remains active. Editing still returns to the own-listings list.
+      router.replace(isEditing ? '/(tabs)/search/listings/my-listings' : '/(tabs)/search');
     } catch {
       Alert.alert(t('errors.title'), t('listingCreate.saveFailed'));
     } finally {
@@ -186,7 +191,6 @@ function CreateListingContent() {
               {t('listingCreate.homeLocation')}
             </Text>
             <Input label={t('listingCreate.listingTitleLabel')} value={title} onChangeText={setTitle} placeholder={t('listingCreate.listingTitlePlaceholder')} />
-            <Input label={t('listingCreate.addressLabel')} value={address} onChangeText={setAddress} placeholder={t('listingCreate.addressPlaceholder')} />
             <Input label={t('listingCreate.cityLabel')} value={city} onChangeText={setCity} placeholder={t('listingCreate.cityPlaceholder')} />
             <Input label={t('listingCreate.countryLabel')} value={country} onChangeText={setCountry} placeholder={t('listingCreate.countryPlaceholder')} />
 
@@ -232,6 +236,17 @@ function CreateListingContent() {
               </View>
               <MaterialIcons name={hasPets ? 'check-circle' : 'radio-button-unchecked'} size={22} color={hasPets ? theme.primary : theme.borderMuted} />
             </TouchableOpacity>
+
+            {hasPets && <View>
+              <Text style={{ color: theme.text, marginBottom: 12 }}>{t('fixes.petCount', { count: pets.length })}</Text>
+              {pets.map((pet, index) => <View key={index} style={{ borderWidth: 1, borderColor: theme.border, borderRadius: 16, padding: 12, marginBottom: 12 }}>
+                <Input label={t('fixes.petType')} value={pet.type} onChangeText={value => setPets(prev => prev.map((p, i) => i === index ? { ...p, type: value } : p))} />
+                <Input label={t('fixes.petName')} value={pet.name} onChangeText={value => setPets(prev => prev.map((p, i) => i === index ? { ...p, name: value } : p))} />
+                <Input label={t('fixes.petNeeds')} placeholder={t('fixes.petNeedsHint')} value={pet.special_needs} multiline onChangeText={value => setPets(prev => prev.map((p, i) => i === index ? { ...p, special_needs: value } : p))} />
+                <TouchableOpacity onPress={() => setPets(prev => prev.filter((_, i) => i !== index))}><Text style={{ color: theme.error }}>{t('fixes.remove')}</Text></TouchableOpacity>
+              </View>)}
+              <Button label={t('fixes.addPet')} onPress={() => setPets(prev => [...prev, { type: '', name: '', special_needs: '' }])} />
+            </View>}
 
             {/* Add responsibility */}
             <Text style={{ fontSize: 12, fontFamily: 'Nunito_700Bold', color: theme.textMuted, letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 8 }}>
@@ -327,6 +342,7 @@ function CreateListingContent() {
               { label: t('common.from'), value: availableFrom ? formatDate(toDateString(availableFrom)) : '—' },
               { label: t('common.to'), value: availableTo ? formatDate(toDateString(availableTo)) : '—' },
               { label: t('search.petsLabel'), value: hasPets ? t('common.yes') : t('common.no') },
+              ...(hasPets ? [{ label: t('listingDetail.petsTitle'), value: pets.map(p => `${p.name} (${p.type}): ${p.special_needs ?? ''}`).join('\n') }] : []),
               { label: t('listingCreate.tasksTitle'), value: responsibilities.length > 0 ? responsibilities.join(', ') : '—' },
             ].map(({ label, value }) => (
               <View key={label} style={{ flexDirection: 'row', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: theme.border }}>

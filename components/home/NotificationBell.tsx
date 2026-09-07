@@ -1,3 +1,4 @@
+import { readNotification, openNotification } from '@/lib/api/notifications';
 import { useRef, useState } from 'react';
 import { TouchableOpacity, View, Text, Modal, Pressable, FlatList, Dimensions } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -84,7 +85,7 @@ export function NotificationBell() {
                 keyExtractor={(item) => item.id}
                 renderItem={({ item }) => (
                   <TouchableOpacity
-                    onPress={() => markRead(item.id)}
+                    onPress={() => { void readNotification(item.id).catch(() => {}); setIsOpen(false); openNotification(item); }}
                     style={{
                       padding: 14,
                       borderBottomWidth: 1,
