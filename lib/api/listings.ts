@@ -1,8 +1,14 @@
+import { File } from 'expo-file-system';
 import { supabase } from '@/lib/supabase';
+import { toDateString } from '@/lib/utils/formatDate';
 import type { Listing, SearchFilters } from '@/types/listing';
 
 export async function getListings(filters: SearchFilters = {}) {
-  let query = supabase.from('listings').select('*').eq('status', 'active');
+  let query = supabase
+    .from('listings')
+    .select('*')
+    .eq('status', 'active')
+    .or(`available_to.is.null,available_to.gte.${toDateString(new Date())}`);
 
   if (filters.city) query = query.ilike('city', `%${filters.city}%`);
   if (filters.country) query = query.ilike('country', `%${filters.country}%`);
@@ -60,9 +66,7 @@ export async function deleteListing(id: string) {
 export async function uploadListingPhoto(ownerId: string, uri: string) {
   const ext = (uri.split('.').pop()?.split('?')[0] ?? 'jpg').toLowerCase();
   const path = `${ownerId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-  const response = await fetch(uri);
-  const blob = await response.blob();
-  const arrayBuffer = await blob.arrayBuffer();
+  const arrayBuffer = await new File(uri).arrayBuffer();
   const { error } = await supabase.storage.from('listing-photos').upload(path, arrayBuffer, {
     contentType: `image/${ext === 'jpg' ? 'jpeg' : ext}`,
     upsert: true,

@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '@/lib/supabase';
 import { loginSchema, type LoginInput } from '@/lib/utils/validators';
+import { mapAuthErrorKey } from '@/lib/utils/authErrors';
 import { useAppTheme } from '@/lib/contexts/ThemeContext';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -27,7 +28,7 @@ export default function LoginScreen() {
       email: data.email,
       password: data.password,
     });
-    if (authError) setError(authError.message);
+    if (authError) setError(t(`errors.auth.${mapAuthErrorKey(authError.message)}`));
   };
 
   return (

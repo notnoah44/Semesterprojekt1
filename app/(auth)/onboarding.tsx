@@ -29,7 +29,7 @@ export default function OnboardingScreen() {
   const handleFinish = async () => {
     const userId = user?.id;
     if (!userId) {
-      Alert.alert('Error', 'Session expired. Please log in again.');
+      Alert.alert(t('errors.title'), t('errors.sessionExpired'));
       router.replace('/(auth)/login');
       return;
     }
@@ -44,7 +44,7 @@ export default function OnboardingScreen() {
       setRole(selectedRole);
       router.replace('/(tabs)/home');
     } catch (e) {
-      Alert.alert('Error', 'Could not save your profile. Please try again.');
+      Alert.alert(t('errors.title'), t('errors.saveProfileFailed'));
     } finally {
       setIsLoading(false);
     }

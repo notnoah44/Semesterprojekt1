@@ -6,14 +6,14 @@ export const loginSchema = z.object({
 });
 
 export const registerSchema = loginSchema.extend({
-  fullName: z.string().min(2, 'Name must be at least 2 characters'),
+  firstName: z.string().min(2, 'First name must be at least 2 characters'),
+  lastName: z.string().min(2, 'Last name must be at least 2 characters'),
 });
 
 export const profileSchema = z.object({
   full_name: z.string().min(2),
-  age: z.number().int().min(18).max(120).optional(),
+  birth_year: z.number().int().min(1900).max(new Date().getFullYear() - 18).optional(),
   job: z.string().optional(),
-  origin: z.string().optional(),
   bio: z.string().max(500).optional(),
 });
 

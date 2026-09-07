@@ -21,31 +21,40 @@ export function useNotifications() {
         if (data) setNotifications(data);
       });
 
-    const channel = supabase
-      .channel(`notifications:${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `profile_id=eq.${user.id}`,
-        },
-        () => {
-          supabase
-            .from('notifications')
-            .select('*')
-            .eq('profile_id', user.id)
-            .order('created_at', { ascending: false })
-            .then(({ data }) => {
-              if (data) setNotifications(data);
-            });
-        }
-      )
-      .subscribe();
+    const topic = `realtime:notifications:${user.id}`;
+    // Reuse an in-flight channel for this topic instead of calling `.on()` on it again:
+    // removeChannel() only closes the socket asynchronously, so a rapid effect re-run
+    // (e.g. the auth store emitting the user object more than once during registration)
+    // can otherwise find the old, already-(re)joining channel and throw.
+    let channel = supabase.getChannels().find((c) => c.topic === topic);
+
+    if (!channel) {
+      channel = supabase
+        .channel(`notifications:${user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'notifications',
+            filter: `profile_id=eq.${user.id}`,
+          },
+          () => {
+            supabase
+              .from('notifications')
+              .select('*')
+              .eq('profile_id', user.id)
+              .order('created_at', { ascending: false })
+              .then(({ data }) => {
+                if (data) setNotifications(data);
+              });
+          }
+        )
+        .subscribe();
+    }
 
     return () => {
-      channel.unsubscribe();
+      supabase.removeChannel(channel);
     };
   }, [user, setNotifications]);
 }

@@ -3,8 +3,10 @@ import { View, Text, FlatList, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/stores/authStore';
 import { getConversations } from '@/lib/api/chat';
+import { getConnectedProfileIds, getDisplayName } from '@/lib/api/connections';
 import { useAppTheme } from '@/lib/contexts/ThemeContext';
 import { Avatar } from '@/components/ui/Avatar';
 
@@ -12,7 +14,9 @@ export default function ChatListScreen() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const theme = useAppTheme();
+  const { t } = useTranslation();
   const [conversations, setConversations] = useState<any[]>([]);
+  const [connectedIds, setConnectedIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -21,6 +25,7 @@ export default function ChatListScreen() {
     getConversations(user.id)
       .then(setConversations)
       .finally(() => setIsLoading(false));
+    getConnectedProfileIds(user.id).then(setConnectedIds);
   }, [user]);
 
   const getOtherUser = (conv: any) => {
@@ -38,10 +43,10 @@ export default function ChatListScreen() {
             <MaterialIcons name="chat" size={36} color={theme.borderMuted} />
           </View>
           <Text style={{ fontSize: 20, fontFamily: 'Nunito_700Bold', color: theme.text, textAlign: 'center' }}>
-            No conversations yet
+            {t('chat.emptyTitle')}
           </Text>
           <Text style={{ fontSize: 15, color: theme.textMuted, fontFamily: 'Nunito_400Regular', textAlign: 'center' }}>
-            Start a conversation by contacting a sitter or listing owner
+            {t('chat.emptySubtitle')}
           </Text>
         </View>
       ) : (
@@ -55,6 +60,7 @@ export default function ChatListScreen() {
           )}
           renderItem={({ item }) => {
             const other = getOtherUser(item);
+            const displayName = other ? getDisplayName(other.full_name, connectedIds.has(other.id)) : '';
             return (
               <TouchableOpacity
                 onPress={() => router.push(`/(tabs)/chat/${item.id}`)}
@@ -63,13 +69,13 @@ export default function ChatListScreen() {
                   padding: 16, gap: 12, backgroundColor: theme.surface,
                 }}
               >
-                <Avatar uri={other?.avatar_url} name={other?.full_name} size={48} />
+                <Avatar uri={other?.avatar_url} name={displayName} size={48} />
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 16, fontFamily: 'Nunito_700Bold', color: theme.text }}>
-                    {other?.full_name ?? 'Unknown user'}
+                    {displayName || t('chat.unknownUser')}
                   </Text>
                   <Text style={{ fontSize: 13, color: theme.textMuted, fontFamily: 'Nunito_400Regular', marginTop: 2 }}>
-                    Tap to open conversation
+                    {t('chat.tapToOpen')}
                   </Text>
                 </View>
                 <MaterialIcons name="chevron-right" size={20} color={theme.borderMuted} />

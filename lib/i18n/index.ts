@@ -4,10 +4,12 @@ import { getLocales } from 'expo-localization';
 import { en } from './locales/en';
 import { de } from './locales/de';
 import { fr } from './locales/fr';
+import { es } from './locales/es';
 
 export const SUPPORTED_LANGUAGES = [
   { code: 'en', label: 'English', flag: '🇬🇧' },
   { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
+  { code: 'es', label: 'Español', flag: '🇪🇸' },
   { code: 'fr', label: 'Français', flag: '🇫🇷' },
 ] as const;
 
@@ -26,6 +28,7 @@ if (!i18n.isInitialized) {
     resources: {
       en: { translation: en },
       de: { translation: de },
+      es: { translation: es },
       fr: { translation: fr },
     },
     lng: detectDeviceLanguage(),

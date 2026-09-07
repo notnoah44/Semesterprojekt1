@@ -7,7 +7,8 @@ export type BookingStatus =
 
 export interface Booking {
   id: string;
-  listing_id: string;
+  listing_id: string | null;
+  sitter_listing_id: string | null;
   sitter_id: string;
   owner_id: string;
   start_date: string;

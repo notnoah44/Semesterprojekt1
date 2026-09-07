@@ -1,4 +1,5 @@
 import { View, Text, Image } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useAppTheme } from '@/lib/contexts/ThemeContext';
 
 interface AvatarProps {
@@ -12,7 +13,7 @@ export function Avatar({ uri, name, size = 44 }: AvatarProps) {
 
   const initials = name
     ? name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()
-    : '?';
+    : null;
 
   if (uri) {
     return (
@@ -39,13 +40,17 @@ export function Avatar({ uri, name, size = 44 }: AvatarProps) {
       borderWidth: 2,
       borderColor: theme.primaryLight,
     }}>
-      <Text style={{
-        color: theme.onPrimaryContainer,
-        fontSize: size * 0.35,
-        fontFamily: 'Nunito_700Bold',
-      }}>
-        {initials}
-      </Text>
+      {initials ? (
+        <Text style={{
+          color: theme.onPrimaryContainer,
+          fontSize: size * 0.35,
+          fontFamily: 'Nunito_700Bold',
+        }}>
+          {initials}
+        </Text>
+      ) : (
+        <MaterialIcons name="person" size={size * 0.55} color={theme.onPrimaryContainer} />
+      )}
     </View>
   );
 }

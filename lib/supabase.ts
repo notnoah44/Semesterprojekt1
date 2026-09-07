@@ -32,5 +32,10 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
+    // pkce puts the auth code in a `?code=` query param on the redirect deep
+    // link, which expo-router's useLocalSearchParams reads directly — the
+    // default 'implicit' flow instead appends `#access_token=...` as a URL
+    // fragment, which isn't picked up the same way. See app/auth/callback.tsx.
+    flowType: 'pkce',
   },
 });

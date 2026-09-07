@@ -2,6 +2,7 @@ import { View, Text, FlatList, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useNotificationStore } from '@/stores/notificationStore';
 import { useAppTheme } from '@/lib/contexts/ThemeContext';
 import { Card } from '@/components/ui/Card';
@@ -10,6 +11,7 @@ import { formatDate } from '@/lib/utils/formatDate';
 export default function NotificationsScreen() {
   const router = useRouter();
   const theme = useAppTheme();
+  const { t } = useTranslation();
   const { notifications, markRead, markAllRead } = useNotificationStore();
 
   return (
@@ -19,12 +21,12 @@ export default function NotificationsScreen() {
           <MaterialIcons name="arrow-back" size={24} color={theme.text} />
         </TouchableOpacity>
         <Text style={{ flex: 1, fontSize: 20, fontFamily: 'Nunito_700Bold', color: theme.text }}>
-          Notifications
+          {t('notifications.title')}
         </Text>
         {notifications.some((n) => !n.read) && (
           <TouchableOpacity onPress={markAllRead}>
             <Text style={{ color: theme.primary, fontFamily: 'Nunito_600SemiBold', fontSize: 14 }}>
-              Mark all read
+              {t('notifications.markAllRead')}
             </Text>
           </TouchableOpacity>
         )}
@@ -36,7 +38,7 @@ export default function NotificationsScreen() {
             <MaterialIcons name="notifications" size={36} color={theme.borderMuted} />
           </View>
           <Text style={{ fontSize: 16, color: theme.textMuted, fontFamily: 'Nunito_400Regular' }}>
-            No notifications yet
+            {t('notifications.empty')}
           </Text>
         </View>
       ) : (

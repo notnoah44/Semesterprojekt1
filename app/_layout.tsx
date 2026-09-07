@@ -57,17 +57,20 @@ export default function RootLayout() {
     SplashScreen.hideAsync();
   }, [fontsReady, isLoading]);
 
+  const user = useAuthStore((s) => s.user);
+
   useEffect(() => {
     if (isLoading || !fontsReady) return;
-    const user = useAuthStore.getState().user;
     const inAuth = segments[0] === '(auth)';
+    const inOnboarding = inAuth && (segments as string[])[1] === 'onboarding';
 
-    if (!user && !inAuth) {
-      router.replace('/(auth)/login');
-    } else if (user && inAuth) {
+    // Guests may browse freely; only bounce logged-in users away from the auth
+    // screens — except onboarding, which a freshly registered user must still
+    // go through (registration leaves the user signed in immediately).
+    if (user && inAuth && !inOnboarding) {
       router.replace('/(tabs)/home');
     }
-  }, [isLoading, fontsReady, segments, router]);
+  }, [isLoading, fontsReady, segments, router, user]);
 
   if (!fontsReady || isLoading) return null;
 

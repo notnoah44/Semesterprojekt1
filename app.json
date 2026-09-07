@@ -19,7 +19,10 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -28,11 +31,23 @@
     "plugins": [
       "expo-router",
       "expo-font",
-      "expo-status-bar",
       "expo-localization",
       "@react-native-community/datetimepicker",
       "expo-secure-store",
-      "expo-splash-screen"
-    ]
+      "expo-splash-screen",
+      "expo-video",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "PawStay benötigt Zugriff auf deine Fotos, damit du ein Profilbild und Galerie-Fotos hochladen kannst."
+        }
+      ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "7370b4f6-efa3-47ac-a335-a7fbfb9955fe"
+      }
+    }
   }
 }

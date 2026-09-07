@@ -1,10 +1,12 @@
 import { TouchableOpacity, View, Text } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useRole } from '@/lib/hooks/useRole';
 import { useAppTheme } from '@/lib/contexts/ThemeContext';
 
 export function RoleToggle() {
   const { role, toggleRole } = useRole();
   const theme = useAppTheme();
+  const { t } = useTranslation();
   const isSitter = role === 'sitter';
 
   return (
@@ -18,7 +20,7 @@ export function RoleToggle() {
         borderWidth: 1,
         borderColor: theme.border,
       }}
-      accessibilityLabel={`Switch to ${isSitter ? 'Host' : 'Sitter'} mode`}
+      accessibilityLabel={isSitter ? t('role.switchToHost') : t('role.switchToSitter')}
     >
       {(['sitter', 'anbieter'] as const).map((r) => {
         const active = role === r;
@@ -38,7 +40,7 @@ export function RoleToggle() {
               color: active ? theme.onPrimaryContainer : theme.textSubtle,
               fontFamily: 'Nunito_700Bold',
             }}>
-              {r === 'sitter' ? 'Sitter' : 'Host'}
+              {r === 'sitter' ? t('role.sitterLabel') : t('role.hostLabel')}
             </Text>
           </View>
         );

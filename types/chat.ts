@@ -3,6 +3,8 @@ export interface Conversation {
   participant1: string;
   participant2: string;
   listing_id: string | null;
+  sitter_listing_id: string | null;
+  is_unlocked: boolean;
   created_at: string;
 }
 

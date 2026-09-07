@@ -14,27 +14,49 @@ export async function getConversations(userId: string) {
 export async function getConversation(id: string) {
   const { data, error } = await supabase
     .from('conversations')
-    .select('*, participant1_profile:profiles!participant1(*), participant2_profile:profiles!participant2(*)')
+    .select(`
+      *,
+      participant1_profile:profiles!participant1(*),
+      participant2_profile:profiles!participant2(*),
+      listing:listings(owner_id),
+      sitter_listing:sitter_listings(sitter_id)
+    `)
     .eq('id', id)
     .single();
   if (error) throw error;
   return data;
 }
 
-export async function getOrCreateConversation(userId: string, otherUserId: string, listingId?: string) {
-  const { data: existing } = await supabase
+export async function findConversation(userId: string, otherUserId: string) {
+  const { data } = await supabase
     .from('conversations')
     .select('*')
     .or(
       `and(participant1.eq.${userId},participant2.eq.${otherUserId}),and(participant1.eq.${otherUserId},participant2.eq.${userId})`
     )
     .maybeSingle();
+  return data as Conversation | null;
+}
 
-  if (existing) return existing as Conversation;
+export async function getOrCreateConversation(
+  userId: string,
+  otherUserId: string,
+  listingId?: string,
+  sitterListingId?: string,
+  isUnlocked = true
+) {
+  const existing = await findConversation(userId, otherUserId);
+  if (existing) return existing;
 
   const { data, error } = await supabase
     .from('conversations')
-    .insert({ participant1: userId, participant2: otherUserId, listing_id: listingId ?? null })
+    .insert({
+      participant1: userId,
+      participant2: otherUserId,
+      listing_id: listingId ?? null,
+      sitter_listing_id: sitterListingId ?? null,
+      is_unlocked: isUnlocked,
+    })
     .select()
     .single();
   if (error) throw error;
