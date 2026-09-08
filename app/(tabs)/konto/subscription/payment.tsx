@@ -25,13 +25,13 @@ export default function PaymentScreen() {
           <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
             <MaterialIcons name="storefront" size={22} color={theme.primary} />
             <Text style={{ flex: 1, fontSize: 14, color: theme.text, fontFamily: 'Nunito_400Regular', lineHeight: 20 }}>
-              {t('payment.storeManaged')}
+              {t('billing.terms')}
             </Text>
           </View>
         </Card>
         <Card variant="filled">
           <Text style={{ fontSize: 12, color: theme.textMuted, fontFamily: 'Nunito_400Regular', lineHeight: 18 }}>
-            {t('payment.demoNotice')}
+            {t('billing.refundHint')}
           </Text>
         </Card>
       </ScrollView>

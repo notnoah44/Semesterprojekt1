@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -10,6 +10,10 @@ import { useAppTheme } from '@/lib/contexts/ThemeContext';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
+import { billingMode, openSubscriptionManagement, resetBillingIdentity } from '@/lib/revenuecat';
+import { useNotificationStore } from '@/stores/notificationStore';
+import { useBookingStore } from '@/stores/bookingStore';
+import { useSearchStore } from '@/stores/searchStore';
 
 export default function DeleteAccountScreen() {
   const router = useRouter();
@@ -26,7 +30,7 @@ export default function DeleteAccountScreen() {
     }
     Alert.alert(
       t('deleteAccount.deleteAlertTitle'),
-      t('deleteAccount.deleteAlertMsg'),
+      t('billing.deleteConfirm'),
       [
         { text: t('common.cancel'), style: 'cancel' },
         {
@@ -35,21 +39,17 @@ export default function DeleteAccountScreen() {
           onPress: async () => {
             setIsLoading(true);
             try {
-              const { data, error } = await supabase.functions.invoke<{ status: 'deleted' | 'scheduled'; scheduledFor?: string }>('delete-account');
+              const { data, error } = await supabase.functions.invoke<{ status: string }>('delete-account');
               if (error) throw error;
 
-              if (data?.status === 'scheduled' && data.scheduledFor) {
-                const date = new Date(data.scheduledFor).toLocaleDateString();
-                Alert.alert(
-                  t('deleteAccount.scheduledTitle'),
-                  t('deleteAccount.scheduledMsg', { date }),
-                  [{ text: t('common.ok'), onPress: () => router.back() }]
-                );
-                return;
-              }
-
-              await supabase.auth.signOut();
+              if (data?.status !== 'deleted') throw new Error('Immediate deletion was not confirmed');
+              await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
               clear();
+              useNotificationStore.getState().setNotifications([]);
+              useBookingStore.setState({ bookings: [], activeBooking: null });
+              useSearchStore.setState({ filters: {}, savedSearches: [] });
+              void resetBillingIdentity().catch(() => {});
+              router.replace('/(tabs)/home');
               Alert.alert(t('deleteAccount.deletedTitle'), t('deleteAccount.deletedMsg'));
             } catch (e) {
               console.error('[delete-account] failed:', e);
@@ -72,7 +72,7 @@ export default function DeleteAccountScreen() {
         <Text style={{ flex: 1, fontSize: 20, fontFamily: 'Nunito_700Bold', color: theme.text }}>{t('deleteAccount.title')}</Text>
       </View>
 
-      <View style={{ padding: 20, gap: 20 }}>
+      <ScrollView contentContainerStyle={{ padding: 20, gap: 20 }}>
         <Card style={{ backgroundColor: '#FEF2F2', borderColor: theme.error }}>
           <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
             <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: '#FEE2E2', alignItems: 'center', justifyContent: 'center' }}>
@@ -83,10 +83,19 @@ export default function DeleteAccountScreen() {
                 {t('deleteAccount.irreversible')}
               </Text>
               <Text style={{ fontSize: 14, color: '#991B1B', fontFamily: 'Nunito_400Regular', lineHeight: 20 }}>
-                {t('deleteAccount.description')}
+                {t('billing.deleteDescription')}
               </Text>
             </View>
           </View>
+        </Card>
+
+        <Card style={{ gap: 12 }}>
+          <Text style={{ color: theme.text, fontSize: 14, lineHeight: 21 }}>{t('billing.deleteWarning')}</Text>
+          <Button label={t('billing.manage')} variant="secondary" onPress={async () => {
+            if (billingMode() === 'test_store') { Alert.alert(t('subscription.title'), t('billing.testManage')); return; }
+            try { await openSubscriptionManagement(); }
+            catch { Alert.alert(t('errors.title'), t('billing.linkFailed')); }
+          }} />
         </Card>
 
         <Input
@@ -102,10 +111,10 @@ export default function DeleteAccountScreen() {
           onPress={handleDelete}
           variant="danger"
           loading={isLoading}
-          disabled={confirmation !== 'DELETE'}
+          disabled={confirmation !== 'DELETE' || isLoading}
           fullWidth
         />
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }

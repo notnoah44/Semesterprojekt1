@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, FlatList, TextInput, TouchableOpacity, Keyboard, KeyboardAvoidingView, Platform, Alert, AppState } from 'react-native';
+import { useState, useMemo, useRef, useCallback } from 'react';
+import { View, Text, FlatList, TextInput, TouchableOpacity, Platform, Alert, AppState } from 'react-native';
+import { KeyboardAvoidingView, useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useHeaderHeight } from '@react-navigation/elements';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { ReportModal } from '@/components/chat/ReportModal';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -16,8 +17,11 @@ import { Avatar } from '@/components/ui/Avatar';
 import type { Message } from '@/types/chat';
 
 export default function ConversationScreen() {
-  const headerHeight = useHeaderHeight();
   const insets = useSafeAreaInsets();
+  const { progress } = useReanimatedKeyboardAnimation();
+  const composerInsets = useAnimatedStyle(() => ({
+    paddingBottom: insets.bottom * (1 - Math.max(0, Math.min(1, progress.value))),
+  }), [insets.bottom]);
   const { conversationId } = useLocalSearchParams<{ conversationId: string }>();
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
@@ -36,23 +40,9 @@ export default function ConversationScreen() {
   const [retry, setRetry] = useState(0);
   const [showReport, setShowReport] = useState(false);
   const [listingRef, setListingRef] = useState<{ id: string; title: string; sitter: boolean } | null>(null);
-  const [androidKeyboardHeight, setAndroidKeyboardHeight] = useState(0);
+  const newestFirst = useMemo(() => [...messages].reverse(), [messages]);
   const focused = useRef(false);
   const listRef = useRef<FlatList>(null);
-
-  useEffect(() => {
-    if (Platform.OS !== 'android') return;
-    const showSubscription = Keyboard.addListener('keyboardDidShow', (event) => {
-      setAndroidKeyboardHeight(event.endCoordinates.height);
-    });
-    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
-      setAndroidKeyboardHeight(0);
-    });
-    return () => {
-      showSubscription.remove();
-      hideSubscription.remove();
-    };
-  }, []);
 
   useFocusEffect(useCallback(() => {
     focused.current = true;
@@ -88,7 +78,7 @@ export default function ConversationScreen() {
   const handleNewMessage = useCallback((msg: Message) => {
     setMessages((prev) => prev.some(m => m.id === msg.id) ? prev : [...prev, msg]);
     if (focused.current && AppState.currentState === 'active' && user && msg.sender_id !== user.id) void markMessagesRead(msg.conversation_id, user.id).catch(() => {});
-    setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
+    listRef.current?.scrollToOffset({ offset: 0, animated: true });
   }, [user?.id]);
 
   useRealTimeChat(conversationId ?? null, handleNewMessage);
@@ -103,19 +93,16 @@ export default function ConversationScreen() {
       const message = await sendMessage({ conversation_id: conversationId, sender_id: user.id, content });
       handleNewMessage(message);
     } catch { setText(content); Alert.alert(t('errors.title'), t('errors.auth.generic')); }
-    setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
   };
 
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
-      // Android is adjusted explicitly using the keyboard height below;
-      // KeyboardAvoidingView is retained for iOS where padding is reliable.
-      enabled={Platform.OS === 'ios'}
       behavior="padding"
-      keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
+      // This scene fills the window: its own header and safe areas are inside.
+      keyboardVerticalOffset={0}
     >
-    <SafeAreaView edges={['left', 'right']} style={{ flex: 1, backgroundColor: theme.background }}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1, backgroundColor: theme.background }}>
       {/* Header */}
       <View style={{ flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: theme.border, backgroundColor: theme.surface, gap: 12 }}>
         <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/chat'))}>
@@ -186,10 +173,10 @@ export default function ConversationScreen() {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
         ref={listRef}
-        data={messages}
+        inverted
+        data={newestFirst}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ padding: 16, gap: 6 }}
-        onLayout={() => listRef.current?.scrollToEnd({ animated: false })}
         renderItem={({ item }) => {
           const isMe = item.sender_id === user?.id;
           return (
@@ -215,19 +202,15 @@ export default function ConversationScreen() {
       />
 
       {/* Input */}
-      <View>
+      <Animated.View style={[{ backgroundColor: theme.surface }, composerInsets]}>
         {canReply ? (
           <View style={{
             flexDirection: 'row', alignItems: 'flex-end', padding: 12, gap: 10,
             borderTopWidth: 1, borderTopColor: theme.border, backgroundColor: theme.surface,
-            // Expo Go on Android can keep the screen in edge-to-edge mode and
-            // leave the keyboard over the bottom of the scene. Move the
-            // composer by the actual keyboard height in that case.
-            marginBottom: Platform.OS === 'android' ? androidKeyboardHeight + insets.bottom : 0,
           }}>
             <TextInput
               style={{
-                flex: 1, minHeight: 42, maxHeight: 120,
+                flex: 1, minHeight: 42, maxHeight: 120, textAlignVertical: 'top',
                 backgroundColor: theme.surfaceDim,
                 borderRadius: 21, paddingHorizontal: 16, paddingVertical: 10,
                 fontSize: 15, color: theme.text, fontFamily: 'Nunito_400Regular',
@@ -257,7 +240,7 @@ export default function ConversationScreen() {
             </TouchableOpacity>
           </View>
         )}
-      </View>
+      </Animated.View>
     </SafeAreaView>
     </KeyboardAvoidingView>
   );

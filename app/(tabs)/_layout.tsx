@@ -1,6 +1,6 @@
 import { useUnreadChatCount } from '@/lib/hooks/useUnreadChatCount';
 import { usePushRegistration } from '@/lib/hooks/usePushRegistration';
-import { Tabs } from 'expo-router';
+import { Tabs, useSegments } from 'expo-router';
 import { PlatformPressable } from '@react-navigation/elements';
 import type { BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
 import { View } from 'react-native';
@@ -43,6 +43,8 @@ function resetTabOnPress({ navigation, route }: { navigation: any; route: { name
 }
 
 export default function TabLayout() {
+  const segments = useSegments() as string[];
+  const inConversation = segments.includes('chat') && segments.includes('[conversationId]');
   const insets = useSafeAreaInsets();
   const theme = useAppTheme();
   const { t } = useTranslation();
@@ -111,8 +113,9 @@ export default function TabLayout() {
         name="chat"
         options={{
           title: t('tabs.chat'),
-          // Free the bottom of the conversation screen while typing.
-          tabBarHideOnKeyboard: true,
+          // Keep the conversation viewport stable throughout keyboard animations.
+          headerShown: !inConversation,
+          ...(inConversation ? { tabBarStyle: { display: 'none' as const } } : {}),
           tabBarIcon: ({ color, size }) => <View><MaterialIcons name="chat" size={size} color={color} />{unreadChat > 0 && <View style={{ position: 'absolute', top: -2, right: -4, width: 9, height: 9, borderRadius: 5, backgroundColor: theme.error }} />}</View>,
         }}
         listeners={resetTabOnPress}

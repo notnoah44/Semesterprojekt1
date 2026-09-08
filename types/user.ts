@@ -19,6 +19,7 @@ export interface Profile {
   membership_expires_at: string | null;
   membership_plan: MembershipPlan | null;
   auto_renew: boolean;
+  membership_status?: 'inactive' | 'active' | 'cancelled' | 'grace_period' | 'billing_issue' | 'refunded';
   scheduled_deletion_at: string | null;
   id_verified: boolean;
   id_verification_submitted_at: string | null;
