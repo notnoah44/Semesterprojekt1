@@ -148,6 +148,13 @@ export const en = {
     markAllRead: 'Mark all read',
     empty: 'No notifications yet',
     noNew: 'No new notifications',
+    types: {
+      new_message: 'New message',
+      booking_request: 'New booking request',
+      booking_update: 'Update on your booking',
+      favouriteListing: 'Someone favourited your listing',
+      favouriteSitter: 'Someone favourited your profile',
+    },
   },
   chat: {
     emptyTitle: 'No conversations yet',
@@ -620,6 +627,16 @@ export const en = {
   bookings: {
     title: 'Bookings',
     empty: 'No bookings yet',
+    sectionRequestsMade: 'Requests you sent',
+    sectionRequestsReceived: 'Requests you received',
+    sectionOngoingReceived: 'Ongoing bookings on your listings',
+    sectionOngoingMade: 'Your ongoing bookings',
+    filterAll: 'All',
+    filterRequestsMade: 'Sent',
+    filterRequestsReceived: 'Received',
+    filterOngoingMade: 'Ongoing (sent)',
+    filterOngoingReceived: 'Ongoing (received)',
+    filterClosed: 'Closed',
   },
   bookingDetail: {
     notFound: 'Booking not found',

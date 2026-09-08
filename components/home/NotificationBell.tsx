@@ -1,4 +1,4 @@
-import { readNotification, openNotification } from '@/lib/api/notifications';
+import { readNotification, openNotification, notificationLabel, notificationIcon } from '@/lib/api/notifications';
 import { useRef, useState } from 'react';
 import { TouchableOpacity, View, Text, Modal, Pressable, FlatList, Dimensions } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -91,14 +91,20 @@ export function NotificationBell() {
                       borderBottomWidth: 1,
                       borderBottomColor: theme.border,
                       backgroundColor: item.read ? 'transparent' : theme.primaryContainer,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 10,
                     }}
                   >
-                    <Text style={{ fontSize: 13, fontFamily: item.read ? 'Nunito_400Regular' : 'Nunito_700Bold', color: theme.text }}>
-                      {item.type.replace(/_/g, ' ')}
-                    </Text>
-                    <Text style={{ fontSize: 11, color: theme.textMuted, fontFamily: 'Nunito_400Regular', marginTop: 2 }}>
-                      {formatDate(item.created_at)}
-                    </Text>
+                    <MaterialIcons name={notificationIcon(item) as any} size={18} color={theme.primary} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 13, fontFamily: item.read ? 'Nunito_400Regular' : 'Nunito_700Bold', color: theme.text }}>
+                        {notificationLabel(item, t)}
+                      </Text>
+                      <Text style={{ fontSize: 11, color: theme.textMuted, fontFamily: 'Nunito_400Regular', marginTop: 2 }}>
+                        {formatDate(item.created_at)}
+                      </Text>
+                    </View>
                   </TouchableOpacity>
                 )}
               />

@@ -1,4 +1,4 @@
-import { readNotification, openNotification } from '@/lib/api/notifications';
+import { readNotification, openNotification, notificationLabel, notificationIcon } from '@/lib/api/notifications';
 import { View, Text, FlatList, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -52,13 +52,21 @@ export default function NotificationsScreen() {
               <Card style={{
                 backgroundColor: item.read ? theme.surface : theme.primaryContainer,
                 borderColor: item.read ? theme.border : theme.primary,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 12,
               }}>
-                <Text style={{ fontSize: 14, fontFamily: item.read ? 'Nunito_400Regular' : 'Nunito_700Bold', color: theme.text }}>
-                  {item.type.replace(/_/g, ' ')}
-                </Text>
-                <Text style={{ fontSize: 12, color: theme.textMuted, fontFamily: 'Nunito_400Regular', marginTop: 4 }}>
-                  {formatDate(item.created_at)}
-                </Text>
+                <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: theme.surfaceDim, alignItems: 'center', justifyContent: 'center' }}>
+                  <MaterialIcons name={notificationIcon(item) as any} size={20} color={theme.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontFamily: item.read ? 'Nunito_400Regular' : 'Nunito_700Bold', color: theme.text }}>
+                    {notificationLabel(item, t)}
+                  </Text>
+                  <Text style={{ fontSize: 12, color: theme.textMuted, fontFamily: 'Nunito_400Regular', marginTop: 4 }}>
+                    {formatDate(item.created_at)}
+                  </Text>
+                </View>
               </Card>
             </TouchableOpacity>
           )}

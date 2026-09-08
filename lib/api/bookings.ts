@@ -31,6 +31,16 @@ export async function getBookingsForOwner(ownerId: string) {
   return data;
 }
 
+export async function getBookingsForUser(userId: string) {
+  const { data, error } = await supabase
+    .from('bookings')
+    .select('*, listing:listings(*), sitter_listing:sitter_listings(*), sitter:profiles!sitter_id(*), owner:profiles!owner_id(*)')
+    .or(`sitter_id.eq.${userId},owner_id.eq.${userId}`)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
 export async function createBooking(booking: Omit<Booking, 'id' | 'created_at'>) {
   const { data, error } = await supabase
     .from('bookings')

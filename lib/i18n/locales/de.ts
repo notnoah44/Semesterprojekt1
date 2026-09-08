@@ -150,6 +150,13 @@ export const de: TranslationSchema = {
     markAllRead: 'Alle als gelesen markieren',
     empty: 'Noch keine Benachrichtigungen',
     noNew: 'Keine neuen Benachrichtigungen',
+    types: {
+      new_message: 'Neue Nachricht',
+      booking_request: 'Neue Buchungsanfrage',
+      booking_update: 'Update zu deiner Buchung',
+      favouriteListing: 'Jemand hat dein Inserat favorisiert',
+      favouriteSitter: 'Jemand hat dein Profil favorisiert',
+    },
   },
   chat: {
     emptyTitle: 'Noch keine Unterhaltungen',
@@ -622,6 +629,16 @@ export const de: TranslationSchema = {
   bookings: {
     title: 'Buchungen',
     empty: 'Noch keine Buchungen',
+    sectionRequestsMade: 'Gestellte Anfragen',
+    sectionRequestsReceived: 'Erhaltene Anfragen',
+    sectionOngoingReceived: 'Laufende Buchungen auf deinen Inseraten',
+    sectionOngoingMade: 'Deine laufenden Buchungen',
+    filterAll: 'Alle',
+    filterRequestsMade: 'Gestellt',
+    filterRequestsReceived: 'Erhalten',
+    filterOngoingMade: 'Laufend (gestellt)',
+    filterOngoingReceived: 'Laufend (erhalten)',
+    filterClosed: 'Abgeschlossen',
   },
   bookingDetail: {
     notFound: 'Buchung nicht gefunden',

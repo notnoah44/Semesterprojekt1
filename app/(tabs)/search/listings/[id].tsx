@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { getListing } from '@/lib/api/listings';
 import { createBooking } from '@/lib/api/bookings';
 import { findConversation, getOrCreateConversation } from '@/lib/api/chat';
-import { getFavouriteListingIds, addFavourite, removeFavourite } from '@/lib/api/favourites';
+import { getFavouriteListingIds, addFavourite, removeFavourite, getFavouriteCount } from '@/lib/api/favourites';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppTheme } from '@/lib/contexts/ThemeContext';
 import { useRequireAuth } from '@/lib/hooks/useRequireAuth';
@@ -34,11 +34,17 @@ export default function ListingDetailScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [showRequest, setShowRequest] = useState(false);
   const [isFavourite, setIsFavourite] = useState(false);
+  const [favouriteCount, setFavouriteCount] = useState(0);
 
   useEffect(() => {
     if (!id) return;
     getListing(id).then(setListing).finally(() => setIsLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    getFavouriteCount({ listingId: id }).then(setFavouriteCount).catch(() => {});
+  }, [id, isFavourite]);
 
   useEffect(() => {
     if (!id || !user) return;
@@ -103,7 +109,7 @@ export default function ListingDetailScreen() {
 
         {/* Back button */}
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/search'))}
           style={{ position: 'absolute', top: 16, left: 16, backgroundColor: 'rgba(255,255,255,0.92)', borderRadius: 99, padding: 8 }}
         >
           <MaterialIcons name="arrow-back" size={20} color={theme.text} />
@@ -130,6 +136,14 @@ export default function ListingDetailScreen() {
                   {listing.city}, {listing.country}
                 </Text>
               </View>
+              {favouriteCount > 0 && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 }}>
+                  <MaterialIcons name="favorite" size={14} color={theme.error} />
+                  <Text style={{ fontSize: 13, color: theme.textMuted, fontFamily: 'Nunito_400Regular' }}>
+                    {favouriteCount}
+                  </Text>
+                </View>
+              )}
             </View>
             {listing.has_pets && <Badge label={t('search.petsLabel')} variant="primary" />}
           </View>

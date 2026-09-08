@@ -81,6 +81,15 @@ export async function addFavouriteSitter(profileId: string, sitterId: string) {
   if (error) throw error;
 }
 
+export async function getFavouriteCount(target: { listingId?: string; sitterId?: string }) {
+  const { data, error } = await supabase.rpc('get_favourite_count', {
+    p_listing_id: target.listingId ?? null,
+    p_sitter_id: target.sitterId ?? null,
+  });
+  if (error) throw error;
+  return (data ?? 0) as number;
+}
+
 export async function removeFavouriteSitter(profileId: string, sitterId: string) {
   const { error } = await supabase
     .from('favourites')

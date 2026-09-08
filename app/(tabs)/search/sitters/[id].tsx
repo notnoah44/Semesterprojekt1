@@ -10,7 +10,7 @@ import { getSitterListing } from '@/lib/api/sitterListings';
 import { getTravelCompanions } from '@/lib/api/profiles';
 import { createBooking } from '@/lib/api/bookings';
 import { findConversation, getOrCreateConversation } from '@/lib/api/chat';
-import { getFavouriteSitterIds, addFavouriteSitter, removeFavouriteSitter } from '@/lib/api/favourites';
+import { getFavouriteSitterIds, addFavouriteSitter, removeFavouriteSitter, getFavouriteCount } from '@/lib/api/favourites';
 import { isConnected, getDisplayName } from '@/lib/api/connections';
 import { useAuthStore } from '@/stores/authStore';
 import { useAppTheme } from '@/lib/contexts/ThemeContext';
@@ -46,6 +46,7 @@ export default function SitterListingDetailScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [showRequest, setShowRequest] = useState(false);
   const [isFavourite, setIsFavourite] = useState(false);
+  const [favouriteCount, setFavouriteCount] = useState(0);
   const [connectedToSitter, setConnectedToSitter] = useState(false);
 
   useEffect(() => {
@@ -67,6 +68,11 @@ export default function SitterListingDetailScreen() {
       .then((ids) => setIsFavourite(ids.includes(listing.sitter_id)))
       .catch(() => {});
   }, [listing, user]);
+
+  useEffect(() => {
+    if (!listing) return;
+    getFavouriteCount({ sitterId: listing.sitter_id }).then(setFavouriteCount).catch(() => {});
+  }, [listing, isFavourite]);
 
   const toggleFavourite = async () => {
     if (!ensureAuth() || !user || !listing) return;
@@ -126,7 +132,7 @@ export default function SitterListingDetailScreen() {
 
         {/* Back button */}
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/search'))}
           style={{ position: 'absolute', top: 16, left: 16, backgroundColor: 'rgba(255,255,255,0.92)', borderRadius: 99, padding: 8 }}
         >
           <MaterialIcons name="arrow-back" size={20} color={theme.text} />
@@ -152,6 +158,14 @@ export default function SitterListingDetailScreen() {
                   <MaterialIcons name="location-on" size={14} color={theme.textMuted} />
                   <Text style={{ fontSize: 14, color: theme.textMuted, fontFamily: 'Nunito_400Regular' }}>
                     {listing.locations.map((l) => [l.city, l.country].filter(Boolean).join(', ')).join(' · ')}
+                  </Text>
+                </View>
+              )}
+              {favouriteCount > 0 && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 }}>
+                  <MaterialIcons name="favorite" size={14} color={theme.error} />
+                  <Text style={{ fontSize: 13, color: theme.textMuted, fontFamily: 'Nunito_400Regular' }}>
+                    {favouriteCount}
                   </Text>
                 </View>
               )}
