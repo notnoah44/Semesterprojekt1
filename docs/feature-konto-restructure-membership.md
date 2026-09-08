@@ -1,5 +1,7 @@
 # Feature: Konto-Neustrukturierung, Pro-Preismodell & Rechtematrix
 
+> Historischer Entwurf. Abo-Modell und Kontolöschung wurden am 08.09.2026 durch [Store-Abos im Testbetrieb](store-abos-testbetrieb.md) ersetzt: automatische Store-Verlängerung, kein Toggle, keine Demo-Freischaltung, sofortige Kontolöschung.
+
 Status (2026-09-03): Umsetzung pausiert, Kernarbeit abgeschlossen. Alle 9 Schritte aus Abschnitt 7 sind erledigt, dazu T1/T3/T4/T6/T8/T9 aus der ToDo-Liste (Abschnitt 10). Bewusst offen gelassen: T2 (echtes RevenueCat), T5 (E-Mail-Versand), T7 (aktiver Admin-Alarm) — siehe Abschnitt 10 für Details, falls das Thema später wieder aufgenommen wird.
 
 ## 1. Zusammenfassung

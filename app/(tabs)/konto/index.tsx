@@ -177,11 +177,15 @@ export default function KontoScreen() {
       <ScrollView contentContainerStyle={{ padding: 20, gap: 12 }}>
 
         {/* Profile header */}
-        <View style={{
-          flexDirection: 'row', alignItems: 'center', gap: 16,
-          backgroundColor: theme.primaryContainer,
-          borderRadius: 20, padding: 20, marginBottom: 4,
-        }}>
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={t('konto.publicProfile')}
+            onPress={() => router.push('/(tabs)/konto/profile/edit')}
+            style={{
+            flexDirection: 'row', alignItems: 'center', gap: 16,
+            backgroundColor: theme.primaryContainer,
+            borderRadius: 20, padding: 20, marginBottom: 4,
+            }}>
           <Avatar uri={user?.avatar_url} name={user?.full_name} size={64} />
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: 18, fontFamily: 'Nunito_700Bold', color: theme.onPrimaryContainer }}>
@@ -195,7 +199,7 @@ export default function KontoScreen() {
               variant={isPro ? 'primary' : 'neutral'}
             />
           </View>
-        </View>
+        </TouchableOpacity>
 
         {/* Konto & Profil */}
         <Card>

@@ -1,6 +1,8 @@
 -- ============================================================
 -- PawStay — Supabase Schema
 -- Run this in the Supabase SQL editor (project > SQL editor)
+-- Then apply migrations/20260908010000_store_memberships.sql for store billing
+-- and immediate account deletion. See docs/store-abos-testbetrieb.md.
 -- ============================================================
 
 -- Profiles

@@ -1,10 +1,12 @@
 import { useProfileRefresh } from '@/lib/hooks/useProfileRefresh';
+import { useBillingRefresh } from '@/lib/hooks/useBillingRefresh';
 import { useEffect } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { useFonts, Nunito_300Light, Nunito_400Regular, Nunito_600SemiBold, Nunito_700Bold } from '@expo-google-fonts/nunito';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { getProfile } from '@/lib/api/profiles';
@@ -17,6 +19,7 @@ SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   useProfileRefresh();
+  useBillingRefresh();
   const router = useRouter();
   const segments = useSegments();
   const { setUser, setLoading, isLoading } = useAuthStore();
@@ -30,17 +33,21 @@ export default function RootLayout() {
   const fontsReady = fontsLoaded || !!fontError;
 
   useEffect(() => {
+    let authRevision = 0;
     // Safety net — if Supabase never fires, unblock after 5 s
     const timeout = setTimeout(() => setLoading(false), 5000);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        const revision = ++authRevision;
         clearTimeout(timeout);
         if (session?.user) {
           try {
             const profile = await getProfile(session.user.id);
+            if (revision !== authRevision) return;
             setUser(profile);
           } catch {
+            if (revision !== authRevision) return;
             setUser(null);
           }
         } else {
@@ -50,6 +57,7 @@ export default function RootLayout() {
       }
     );
     return () => {
+      authRevision++;
       clearTimeout(timeout);
       subscription.unsubscribe();
     };
@@ -79,10 +87,12 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      <KeyboardProvider>
       <ThemeProvider>
         <StatusBar style="dark" />
         <Stack screenOptions={{ headerShown: false }} />
       </ThemeProvider>
+      </KeyboardProvider>
     </GestureHandlerRootView>
   );
 }

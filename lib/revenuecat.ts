@@ -1,131 +1,141 @@
-import * as Notifications from 'expo-notifications';
-import { Platform } from 'react-native';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
+import { Linking, Platform } from 'react-native';
+import type Purchases from 'react-native-purchases';
+import type { PurchasesPackage } from 'react-native-purchases';
 import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/stores/authStore';
 import type { MembershipPlan, Profile } from '@/types/user';
 
-/**
- * RevenueCat is not wired up yet — no API keys and no App Store/Play Console
- * products exist (uni project, tested via Expo Go, no dev client). See
- * docs/feature-konto-restructure-membership.md, Abschnitt 4/7.
- *
- * Real integration later: `expo install react-native-purchases` (requires a
- * custom dev client, breaks Expo Go), add EXPO_PUBLIC_REVENUECAT_API_KEY_IOS/
- * _ANDROID, call `Purchases.configure({ apiKey, appUserID })` once at startup,
- * then replace the "demo mode" branches below with
- * `Purchases.getOfferings()` / `Purchases.purchasePackage()`. Auto-renewing
- * IAP subscriptions can only be cancelled through the native store UI, not via
- * API — see the `setAutoRenew` real-mode branch.
- */
 export const ENTITLEMENT_ID = 'pro';
-
-export interface PlanDefinition {
-  id: MembershipPlan;
-  months: number;
-  totalPrice: number;
-  pricePerMonth: number;
+export type BillingFailure = 'unavailable' | 'cancelled' | 'pending' | 'declined' | 'uncertain' | 'linked' | 'syncFailed';
+export class BillingError extends Error {
+  constructor(public reason: BillingFailure) { super(reason); }
+}
+export function billingFailure(error: unknown): BillingFailure {
+  if (error instanceof BillingError) return error.reason;
+  const e = error as { code?: string; userCancelled?: boolean } | null;
+  if (e?.userCancelled || String(e?.code) === '1') return 'cancelled';
+  if (String(e?.code) === '20') return 'pending';
+  if (['3', '4', '42'].includes(String(e?.code))) return 'declined';
+  if (['7', '13'].includes(String(e?.code))) return 'linked';
+  return 'uncertain';
 }
 
-export const MEMBERSHIP_PLANS: PlanDefinition[] = [
-  { id: 'monthly', months: 1, totalPrice: 34, pricePerMonth: 34 },
-  { id: 'quarterly', months: 3, totalPrice: 69, pricePerMonth: 23 },
-  { id: 'yearly', months: 12, totalPrice: 132, pricePerMonth: 11 },
-];
-
-export function isRevenueCatConfigured(): boolean {
-  return !!(process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_IOS || process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID);
+export function billingMode(): 'disabled' | 'test_store' | 'store' {
+  const mode = process.env.EXPO_PUBLIC_BILLING_MODE;
+  return mode === 'test_store' || mode === 'store' ? mode : 'disabled';
+}
+function apiKey() {
+  if (billingMode() === 'test_store') {
+    const key = process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY;
+    return key?.startsWith('test_') ? key : undefined;
+  }
+  if (billingMode() !== 'store') return undefined;
+  const key = Platform.OS === 'ios' ? process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_IOS : process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID;
+  return key && !key.startsWith('test_') ? key : undefined;
+}
+export function isRevenueCatConfigured() {
+  return (Platform.OS === 'android' || Platform.OS === 'ios') &&
+    Constants.executionEnvironment !== ExecutionEnvironment.StoreClient && !!apiKey();
 }
 
-function addMonths(date: Date, months: number): Date {
-  const result = new Date(date);
-  result.setMonth(result.getMonth() + months);
+let sdk: typeof Purchases | undefined;
+let queue: Promise<unknown> = Promise.resolve();
+function serial<T>(work: () => Promise<T>): Promise<T> {
+  const result = queue.then(work, work);
+  queue = result.catch(() => {});
   return result;
 }
-
-export async function purchasePlan(userId: string, planId: MembershipPlan, autoRenew: boolean): Promise<Profile> {
-  const plan = MEMBERSHIP_PLANS.find((p) => p.id === planId);
-  if (!plan) throw new Error(`Unknown plan: ${planId}`);
-
-  if (isRevenueCatConfigured()) {
-    throw new Error('RevenueCat purchase flow not implemented yet');
-  }
-
-  const expiresAt = addMonths(new Date(), plan.months);
-  const { data, error } = await supabase
-    .from('profiles')
-    .update({
-      membership_tier: 'standard',
-      membership_plan: planId,
-      membership_expires_at: expiresAt.toISOString(),
-      auto_renew: autoRenew,
-    })
-    .eq('id', userId)
-    .select()
-    .single();
-  if (error) throw error;
-
-  return data as Profile;
+function assertUser(id: string) {
+  if (useAuthStore.getState().user?.id !== id) throw new BillingError('cancelled');
 }
-
-export async function setAutoRenew(userId: string, autoRenew: boolean): Promise<Profile> {
-  if (isRevenueCatConfigured()) {
-    // Real IAP subscriptions can't be toggled via API — send the user to the
-    // native subscription settings instead, e.g.:
-    // Linking.openURL(Platform.OS === 'ios'
-    //   ? 'itms-apps://apps.apple.com/account/subscriptions'
-    //   : 'https://play.google.com/store/account/subscriptions');
-    throw new Error('Manage auto-renew via the native store subscription settings once RevenueCat is live');
-  }
-
-  const { data, error } = await supabase
-    .from('profiles')
-    .update({ auto_renew: autoRenew })
-    .eq('id', userId)
-    .select()
-    .single();
-  if (error) throw error;
-
-  return data as Profile;
+async function identify(id: string) {
+  assertUser(id);
+  if (!isRevenueCatConfigured()) throw new BillingError('unavailable');
+  // A type-only import + lazy require keeps Expo Go and web usable without native IAP.
+  sdk ??= require('react-native-purchases').default as typeof Purchases;
+  if (!(await sdk.isConfigured())) sdk.configure({ apiKey: apiKey()!, appUserID: id });
+  else if (await sdk.getAppUserID() !== id) await sdk.logIn(id);
+  assertUser(id);
+  return sdk;
 }
-
-const RENEWAL_REMINDER_ID = 'membership-renewal-reminder';
-const REMINDER_DAYS_BEFORE = 7;
-
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: false,
-    shouldSetBadge: false,
-  }),
-});
-
-async function ensureAndroidChannel() {
-  if (Platform.OS !== 'android') return;
-  await Notifications.setNotificationChannelAsync('membership-reminders', {
-    name: 'Abo-Erinnerungen',
-    importance: Notifications.AndroidImportance.DEFAULT,
+export interface StorePlan { id: MembershipPlan; price: string; package: PurchasesPackage }
+export async function getPlans(id: string): Promise<StorePlan[]> {
+  return serial(async () => {
+    const purchases = await identify(id);
+    const offering = (await purchases.getOfferings()).current;
+    assertUser(id);
+    const ids: Record<string, MembershipPlan> = { MONTHLY: 'monthly', THREE_MONTH: 'quarterly', ANNUAL: 'yearly' };
+    return (offering?.availablePackages ?? []).filter(p => ids[p.packageType]).map(p => ({
+      id: ids[p.packageType], price: p.product.priceString, package: p,
+    }));
   });
 }
-
-/** Schedules a local reminder 7 days before `expiresAt`. No-op if that's already in the past or permission is denied. */
-export async function scheduleRenewalReminder(expiresAt: string, title: string, body: string) {
-  const { status } = await Notifications.requestPermissionsAsync();
-  if (status !== 'granted') return;
-
-  await cancelRenewalReminder();
-  await ensureAndroidChannel();
-
-  const triggerDate = new Date(expiresAt);
-  triggerDate.setDate(triggerDate.getDate() - REMINDER_DAYS_BEFORE);
-  if (triggerDate.getTime() <= Date.now()) return;
-
-  await Notifications.scheduleNotificationAsync({
-    identifier: RENEWAL_REMINDER_ID,
-    content: { title, body },
-    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: triggerDate },
+async function syncProfile(id: string): Promise<Profile> {
+  assertUser(id);
+  const { data, error } = await supabase.functions.invoke<{ profile: Profile }>('sync-membership');
+  if (error || !data?.profile || data.profile.id !== id) throw new BillingError('syncFailed');
+  assertUser(id);
+  useAuthStore.getState().setUser(data.profile);
+  return data.profile;
+}
+export async function refreshMembership(id: string) {
+  return serial(async () => {
+    const purchases = await identify(id);
+    await purchases.invalidateCustomerInfoCache();
+    await purchases.getCustomerInfo();
+    return syncProfile(id);
   });
 }
-
-export async function cancelRenewalReminder() {
-  await Notifications.cancelScheduledNotificationAsync(RENEWAL_REMINDER_ID).catch(() => {});
+export async function purchasePlan(id: string, plan: StorePlan) {
+  return serial(async () => {
+    const purchases = await identify(id);
+    try {
+      await purchases.purchasePackage(plan.package);
+    } catch (error) {
+      const reason = billingFailure(error);
+      if (reason !== 'cancelled') {
+        // A network error may follow a successful charge. Reconcile before retrying.
+        await syncProfile(id).catch(() => {});
+      }
+      throw new BillingError(reason);
+    }
+    // SDK success is insufficient to grant Pro: the server verifies the receipt state.
+    return syncProfile(id);
+  });
+}
+export async function restorePurchases(id: string) {
+  return serial(async () => {
+    const purchases = await identify(id);
+    await purchases.restorePurchases();
+    return syncProfile(id);
+  });
+}
+export async function resetBillingIdentity() {
+  return serial(async () => {
+    if (sdk && await sdk.isConfigured() && !(await sdk.isAnonymous())) await sdk.logOut();
+  });
+}
+export async function openSubscriptionManagement() {
+  if (billingMode() === 'test_store') throw new BillingError('unavailable');
+  // Works even with a missing/expired local entitlement, and during account deletion.
+  let url = Platform.OS === 'ios'
+    ? 'https://apps.apple.com/account/subscriptions'
+    : 'https://play.google.com/store/account/subscriptions';
+  const id = useAuthStore.getState().user?.id;
+  if (id && isRevenueCatConfigured()) {
+    try {
+      const managementURL = await serial(async () => (await (await identify(id)).getCustomerInfo()).managementURL);
+      if (managementURL) {
+        const parsed = new URL(managementURL);
+        if (parsed.protocol === 'https:' && ['apps.apple.com', 'play.google.com'].includes(parsed.hostname)) url = managementURL;
+      }
+    } catch { /* Store settings remain reachable even if the SDK cannot sync. */ }
+  }
+  await Linking.openURL(url);
+}
+export async function openRefundHelp() {
+  await Linking.openURL(Platform.OS === 'ios'
+    ? 'https://reportaproblem.apple.com/'
+    : 'https://support.google.com/googleplay/workflow/9813244');
 }
